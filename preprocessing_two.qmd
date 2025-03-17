@@ -1,5 +1,5 @@
 ---
-title: "Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R"
+title: "Processing Vector Data with Apache Sedona and Sparklyr in R"
 subtitle: "Using Vector Data to Obtain Median Household Income in Pickup and Droppoff Neighbourhoods"
 execute: 
   eval: false

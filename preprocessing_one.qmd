@@ -1,5 +1,5 @@
 ---
-title: "Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data"
+title: "Preprocessing and Feature Engineering for Yellow Cab Trip Data"
 execute: 
   eval: false
   output: true

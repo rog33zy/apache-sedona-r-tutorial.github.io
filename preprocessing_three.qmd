@@ -1,5 +1,5 @@
 ---
-title: "Chapter 3: Part One - Processing Raster Data with Apache Sedona and Sparklyr in R"
+title: "Part One - Processing Raster Data with Apache Sedona and Sparklyr in R"
 subtitle: "Using Raster Data to Determine Population Density Around Pickup and Dropoff Points"
 execute: 
   eval: false

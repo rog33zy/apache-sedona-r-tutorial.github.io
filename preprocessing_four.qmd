@@ -1,5 +1,5 @@
 ---
-title: "Chapter Four: Part Two - Processing Raster Data with Apache Sedona and Sparklyr in R"
+title: "Part Two - Processing Raster Data with Apache Sedona and Sparklyr in R"
 subtitle: "Using Raster Tiles to Determine Local Climate Zones of Pickup and Dropoff Locations"
 execute: 
   eval: false

@@ -1,5 +1,5 @@
 ---
-title: "Chapter Five: Combining Updated Locations Data with Initial Trip Data"
+title: "Combining Updated Locations Data with Initial Trip Data"
 execute: 
   eval: false
   output: true
