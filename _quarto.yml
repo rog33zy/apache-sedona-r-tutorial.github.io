@@ -1,24 +1,43 @@
 project:
-  type: website
+  type: book
+  output-dir: docs
 
-website:
-  title: "apache-sedona-r-tutorial.github.io"
-  navbar:
-    left:
-      - href: index.qmd
-        text: Home
-      - href: preprocessing_one.qmd
-        text: Chapter One
-      - href: preprocessing_two.qmd
-        text: Chapter Two
-      - href: preprocessing_three.qmd
-        text: Chapter Three
+book:
+  title: "Apache Sedona R Tutorial"
+  author: "Rodgers Iradukunda"
+  search: true
+  site-url: https://rog33zy.github.io/apache-sedona-r-tutorial.github.io/
+  repo-url: https://github.com/rog33zy/apache-sedona-r-tutorial.github.io
+  repo-actions: [edit, issue]
+  sidebar:
+    style: docked
+    background: light
+  date: today
+  chapters:
+    - index.qmd
+    - preprocessing_one.qmd
+    - preprocessing_two.qmd
+    - preprocessing_three.qmd
 
 format:
   html:
-    theme: cosmo
-    css: styles.css
-    toc: true
+    theme: cosmo  # or replace with [default, style/custom.scss] if you want custom styling
+    fontsize: "16px"
+    linestretch: 1.6
+    smooth-scroll: true
+    toc-depth: 3
+    grid:
+      sidebar-width: 300px
+      body-width: 900px
+      margin-width: 300px
+    code-link: true
+    code-tools:
+      toggle: true
+    highlight-style: printing
+    code-block-bg: true
+    code-overflow: wrap
+    reference-location: margin
+    mermaid:
+      theme: neutral
 
 editor: visual
-
