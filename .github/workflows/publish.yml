@@ -1,35 +1,38 @@
-on:
-  workflow_dispatch:
-  push:
-    branches: main
-
 name: Quarto Publish
+
+on:
+  push:
+    branches: [main]
 
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
+
+      # Install system libraries needed for units, sf, etc.
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.4.0"  # Make sure to set this high enough for MASS and others
 
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
-
-      - name: Install R
-        uses: r-lib/actions/setup-r@v2
         with:
-          r-version: '4.4.0'
+          version: "1.4.550"
 
-      - name: Install R Dependencies
-        uses: r-lib/actions/setup-renv@v2
-        with:
-          cache-version: 1
+      - name: Restore R packages
+        run: Rscript -e 'renv::restore()'
 
-      - name: Render and Publish
-        uses: quarto-dev/quarto-actions/publish@v2
+      - name: Render Quarto Project
+        run: quarto render --log-level=debug
+
+      - name: Publish to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          target: gh-pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
