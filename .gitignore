@@ -9,7 +9,7 @@
 _site/
 
 # R environment
-renv/
+# renv/
 
 # Logs
 derby.log
