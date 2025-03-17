@@ -12,231 +12,231 @@
   {
     "objectID": "preprocessing_one.html",
     "href": "preprocessing_one.html",
-    "title": "2  Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data",
+    "title": "2  Preprocessing and Feature Engineering for Yellow Cab Trip Data",
     "section": "",
     "text": "2.1 Introduction\nIn this chapter, we shall demonstrate how to perform basic data cleaning and feature engineering using Sparklyr, and save the data as Delta tables.\nThe primary dataset was downloaded from Kaggle here. It provides information about taxi trips, including the pickup and dropoff times and locations. Our goal is to enrich it using additional data obtained from geospatial sources, and leave the rest to you to perform analysis and determine how best to predict taxi trip durations.\nThe overarching goal is to show you how to go about using Delta Lake, Sparklyr, Apache Sedona, and R for big data geospatial analysis when you only have an ordinary computer at your disposal.\nFor my actual analysis, I used the entire 7.4 GB dataset provided, containing about 48 million rows. However, for this published tutorial, I use less data so as to timely publish and update this website. For reference, I am using an M1 MacBook with 16 GB of RAM and 500 GB of disk space.\nIf you have 8 GB of RAM, I would suggest that you use one of the four datasets available, as they are also relatively massive with about 12 million rows each!\nAnyhow, enough talking — let us get to work.",
     "crumbs": [
-      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
     ]
   },
   {
     "objectID": "preprocessing_one.html#installing-and-loading-packages",
     "href": "preprocessing_one.html#installing-and-loading-packages",
-    "title": "2  Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data",
+    "title": "2  Preprocessing and Feature Engineering for Yellow Cab Trip Data",
     "section": "2.2 Installing and loading packages",
     "text": "2.2 Installing and loading packages\nWe shall start by installing and loading the necessary libraries: arrow, sparklyr, and dplyr.\n\ninstall.packages(\"arrow\")\ninstall.packages(\"sparklyr\")\n\nWe use sparklyr to interface with Apache Spark in R, allowing us to work efficiently with large datasets using distributed computing. The dplyr package provides powerful data manipulation functions that integrate seamlessly with Spark, making it easier to transform and summarise data. Finally, we load arrow, which enhances Spark’s performance when copying, collecting, and transforming data, thereby improving the overall efficiency of our analysis.\n\n# Load required libraries\nlibrary(arrow)      # Handle efficient data exchange between R and Spark\nlibrary(sparklyr)   # Spark connection and data manipulation\nlibrary(dplyr)      # Data manipulation functions\n\nWe can now use sparklyr to download and install Spark. In this tutorial, we shall install Spark version 3.5.5 and create the JAVA_HOME and SPARK_HOME environment variables. Although you can initialise these variables system-wide, it is often easier to set them within your working file, especially if you have multiple installations of Spark and Java on your system.\nWhilst Spark 3.5 is compiled for Java 8, 11, and 17, I would recommend using Java 11, as it has proven to be more stable in my experience compared to the other two versions. Additionally, I cannot overemphasise the importance of downloading a Java version that is natively designed for your system’s processor. As previously stated, I own an M1 MacBook (ARM 64-bit), so I previously encountered memory issues when using Java designed for Intel processors (x86 64-bit). Switching to an ARM-based Java greatly improved the performance of my code.\nYou can freely download an appropriate Java version for your machine here.",
     "crumbs": [
-      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
     ]
   },
   {
     "objectID": "preprocessing_one.html#installing-spark-and-setting-environment-variables",
     "href": "preprocessing_one.html#installing-spark-and-setting-environment-variables",
-    "title": "2  Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data",
+    "title": "2  Preprocessing and Feature Engineering for Yellow Cab Trip Data",
     "section": "2.3 Installing Spark and setting environment variables",
     "text": "2.3 Installing Spark and setting environment variables\n\n# Install and set up Spark environment\nspark_install(\"3.5.5\")  # Install the specific version of Spark (3.5.5)\n\n# Set Java and Spark home directory paths\nSys.setenv(\"JAVA_HOME\"=\"/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home\")  # Set Java home directory for Spark\nSys.setenv(\"SPARK_HOME\"=spark_home_dir(version = \"3.5.5\"))  # Set Spark home directory\n\nWe shall now create a folder where Spark will store temporary files. By default, Spark stores these files in memory, but in our case, we want them to be stored on disk. This is why we specify a spark_dir path to direct Spark to use disk storage for its temporary file storage.",
     "crumbs": [
-      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
     ]
   },
   {
     "objectID": "preprocessing_one.html#configuring-spark",
     "href": "preprocessing_one.html#configuring-spark",
-    "title": "2  Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data",
+    "title": "2  Preprocessing and Feature Engineering for Yellow Cab Trip Data",
     "section": "2.4 Configuring Spark",
     "text": "2.4 Configuring Spark\n\n# Define path for Spark data\nspark_dir &lt;- file.path(getwd(), \"data\", \"spark\")\n\nWe now initialise a list and provide configuration settings for Spark. This is arguably one of the most important steps, as it determines both how fast your data is processed and whether it is successfully processed. A typical Spark process involves reading data from files (for instance), processing it, transmitting it between executors, and then writing it back to files. All of this is made possible by serialising and deserialising the data into bytes. Naturally, your choice of serializer will heavily influence the performance of your application. Here, we use Kryo serialisation, as it is “significantly faster and more compact than Java serialisation” (source).\nSpark runs on the Java Virtual Machine (JVM), and Java heap space refers to the memory allocated to the JVM during runtime for storing objects and data. The heap memory is divided into Spark memory (M), reserved memory, and user memory. Spark memory itself is divided into two parts: execution and storage (R). Execution memory is used for computations such as shuffles, joins, sorts, and aggregations. Storage memory, on the other hand, is used for caching and propagating internal data across the cluster (when running in cluster mode). Read more about this here.\nIn our case, since we are running in local mode, we set the JVM heap space to 10GB using sparklyr.shell.driver-memory. We then allocate 70% of the JVM heap space to Spark memory (M) using the spark.memory.fraction option. This means 7GB is reserved for both storage and execution. By default, 50% of M (i.e., 3.5GB) is reserved for storage (R). Although this can be adjusted using spark.memory.storageFraction, we leave it at the default here. Importantly, when no execution memory is needed, R can make use of the entire 7GB.\nOther configuration choices we make include enabling the storage of 2GB of data off-heap (i.e., outside the JVM) using the settings spark.memory.offHeap.enabled = \"true\" and spark.memory.offHeap.size = \"2g\". We also instruct Spark not to write intermediate shuffle data to disk—to avoid I/O bottlenecks—by setting spark.sql.shuffle.spill = \"false\".\nTo manage memory efficiently, we enable periodic garbage collection every 60 seconds with spark.cleaner.periodicGC.interval = \"60s\", which helps reclaim unused space. Additionally, we set our maximum partition file size to 200MB. It is recommended to keep this between 128MB and 200MB, depending on your dataset size and cluster resources (source).\nFinally, we enable Adaptive Query Execution (AQE), which allows Spark to automatically optimise query plans during runtime, such as when performing joins, thereby improving performance without manual interference (source).\nPlease update the configuration settings based on your available RAM.\n\n# Create an empty list for Spark configuration settings\nconfig &lt;- list()\n\n# Set Spark configurations for memory and performance optimisation\n\n# Use KryoSerializer for better performance\nconfig$spark.serializer &lt;- \"org.apache.spark.serializer.KryoSerializer\"  \n\n# Set temporary directory for Spark\nconfig$`sparklyr.shell.driver-java-options` &lt;- paste0(\"-Djava.io.tmpdir=\", spark_dir)  \n\n# Use compressed Oops for JVM performance\nconfig$`sparklyr.shell.driver-java-options` &lt;- \"-XX:+UseCompressedOops\"  \n\n# Allocate 10GB of memory for the Spark driver\nconfig$`sparklyr.shell.driver-memory` &lt;- '10G'  \n\n# Set fraction of heap memory used for Spark storage\nconfig$spark.memory.fraction &lt;- 0.7  \n\n# Set shuffle partitions (local setting based on workload)\nconfig$spark.sql.shuffle.partitions.local &lt;- 24  \n\n# Set extra memory for driver\nconfig$spark.driver.extraJavaOptions &lt;- \"-Xmx1G\"  \n\n# Enable off-heap memory usage\nconfig$spark.memory.offHeap.enabled &lt;- \"true\" \n\n# Set 4GB for off-heap memory\nconfig$spark.memory.offHeap.size &lt;- \"2g\"  \n\n# Disable shuffle spill to disk\nconfig$spark.sql.shuffle.spill &lt;- \"false\"  \n\n# Periodic garbage collection interval\nconfig$spark.cleaner.periodicGC.interval &lt;- \"60s\"  \n\n# Set max partition size for shuffle files\nconfig$spark.sql.files.maxPartitionBytes &lt;- \"200m\"  \n\n# Enable adaptive query execution\nconfig$spark.sql.adaptive.enabled &lt;- \"true\"  \n\nAfter configuring our setup, we now connect to Spark. Note that we have also instructed Spark to install the Delta package. This is a necessary step if you want to read from or write to Delta tables, which are commonly used for managing large-scale data with ACID transaction support among many other advantages.\n\n# Connect to Spark with the specified configurations\nsc &lt;- spark_connect(\n  master = \"local[*]\",  # Use all available cores for local execution\n  config = config,      # Use the specified configurations\n  packages = \"delta\"    # Install the Delta Lake package for optimised storage\n)\n\nI recommend using the Spark Web User Interface (UI) to track metrics associated with your Spark application. You can access it as shown below.\n\n# Open Spark web UI for monitoring the connection\nspark_web(sc)\n\nAfter successfully setting up a Spark context, we now turn to loading our data. We start by specifying the path where the files are located. Note that we are instructing Spark to read all CSV files within the yellow_tripdata2 subfolder.\nAdditionally, we organise our data into 24 partitions. We chose 24 because it is three times the number of our total cores (8). This approach helps ensure parallelism during processing and prevents data skew, which could otherwise slow down our computations.",
     "crumbs": [
-      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
     ]
   },
   {
     "objectID": "preprocessing_one.html#loading-the-data",
     "href": "preprocessing_one.html#loading-the-data",
-    "title": "2  Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data",
+    "title": "2  Preprocessing and Feature Engineering for Yellow Cab Trip Data",
     "section": "2.5 Loading the data",
     "text": "2.5 Loading the data\n\n# Define the path for the yellow cab data\nyellow_cab_parent_folder &lt;- file.path(getwd(), \"data\", \"yellow_tripdata2\")\nyellow_cab_filepattern &lt;- file.path(yellow_cab_parent_folder, \"*csv\")\n\n# Read the yellow cab data from CSV files into a Spark DataFrame\nyellow_cab_sdf &lt;- spark_read_csv(\n  sc, \n  path = yellow_cab_filepattern, \n  name = \"yellow_cab_sdf\"\n  ) %&gt;% \n    sdf_repartition(24)\n\n# Print the structure of the DataFrame for inspection\nprint(yellow_cab_sdf, width = Inf)\n\nLooking at the number of partitions, we see that each core will be responsible for approximately an equal number of rows for each task. This ensures that all cores are doing an equal amount of work, without any being overworked.\n\n# Number of rows per each partition\nyellow_cab_sdf %&gt;% \n  sdf_partition_sizes()\n\nBelow we can see how many columns and rows our data has.\n\n# Get the number of rows and columns in the DataFrame\nsdf_ncol(yellow_cab_sdf)\nsdf_nrow(yellow_cab_sdf)",
     "crumbs": [
-      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
     ]
   },
   {
     "objectID": "preprocessing_one.html#preprocessing",
     "href": "preprocessing_one.html#preprocessing",
-    "title": "2  Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data",
+    "title": "2  Preprocessing and Feature Engineering for Yellow Cab Trip Data",
     "section": "2.6 Preprocessing",
     "text": "2.6 Preprocessing\n\n2.6.1 Updating the schema\nLooking at the schema of our data, we can see that all the variables are in character format. This is not ideal, both for processing and memory allocation, as strings take up a significant amount of space.\n\n# Print the schema (column types) of the DataFrame\nsdf_schema(yellow_cab_sdf)\n\nWe shall, therefore, update the schema accordingly.\n\n# Data cleaning: Convert columns to appropriate types and handle missing values\nyellow_cab_sdf &lt;- yellow_cab_sdf |&gt;\n  mutate(\n    VendorID = as.integer(VendorID),  # Convert VendorID to integer\n    tpep_pickup_datetime = to_timestamp(tpep_pickup_datetime),  # Convert to timestamp\n    tpep_dropoff_datetime = to_timestamp(tpep_dropoff_datetime),  # Convert to timestamp\n    passenger_count = as.integer(passenger_count),  # Convert to integer\n    trip_distance = as.numeric(trip_distance),  # Convert to numeric\n    pickup_longitude = as.numeric(pickup_longitude),  # Convert to numeric\n    pickup_latitude = as.numeric(pickup_latitude),  # Convert to numeric\n    RateCodeID = as.character(RateCodeID),  # Convert to character\n    store_and_fwd_flag = as.character(store_and_fwd_flag),  # Convert to character\n    dropoff_longitude = as.numeric(dropoff_longitude),  # Convert to numeric\n    dropoff_latitude = as.numeric(dropoff_latitude),  # Convert to numeric\n    payment_type = as.character(payment_type),  # Convert to character\n    fare_amount = as.numeric(fare_amount),  # Convert to numeric\n    extra = as.numeric(extra),  # Convert to numeric\n    mta_tax = as.numeric(mta_tax),  # Convert to numeric\n    tip_amount = as.numeric(tip_amount),  # Convert to numeric\n    tolls_amount = as.numeric(tolls_amount),  # Convert to numeric\n    improvement_surcharge = as.numeric(improvement_surcharge),  # Convert to numeric\n    total_amount = as.numeric(total_amount)  # Convert to numeric\n  )\n\n\n\n2.6.2 Missing values\nWe now want to check if we have any missing values. By calling collect(), we are triggering an action. By default, Spark performs lazy loading, meaning it does not execute every line of code immediately. The code is only executed when actions are performed, such as collect() and count().\nBy calling collect(), we will change the class of the resulting object into an R dataframe rather than a Spark dataframe.\n\n# Handle missing values: Summarise the missing values in each column\nmissing_values_by_col &lt;- yellow_cab_sdf |&gt;\n  summarise_all(~ sum(as.integer(is.na(.)))) |&gt;\n  collect()\n\n# Print missing values summary\nprint(missing_values_by_col, width = Inf)\n\n\n# print classes of yellow_cab_sdf and missing_values_by_col\nprint(yellow_cab_sdf %&gt;% class())\nprint(missing_values_by_col %&gt;% class())\n\nWe can see that the only column with missing values is improvement_surcharge. We shall impute the missing data using the median value of the column and create a new column called improvement_surcharge_imputed.\n\n# Impute missing values for specific columns (e.g., \"improvement_surcharge\")\ninput_cols &lt;- c(\"improvement_surcharge\")\noutput_cols &lt;- paste0(input_cols, \"_imputed\")\n\nyellow_cab_sdf &lt;- yellow_cab_sdf |&gt;\n  ft_imputer(input_cols = input_cols,   # Specify input columns\n             output_cols = output_cols,  # Specify output columns\n             strategy = \"median\")  # Use median strategy for imputation\n\n\n\n2.6.3 Duplicates\nWe shall now remove duplicates based on specific columns.\n\n# Remove duplicate rows based on specific columns\nyellow_cab_sdf &lt;- sdf_drop_duplicates(\n  yellow_cab_sdf,\n  cols = c(\n    \"VendorID\",\n    \"tpep_pickup_datetime\",\n    \"tpep_dropoff_datetime\",\n    \"pickup_longitude\",\n    \"pickup_latitude\",\n    \"dropoff_longitude\",\n    \"dropoff_latitude\"\n  )\n)\n\n\n\n2.6.4 Outliers\nWe shall also handle outliers by filtering out unreasonable values in our dataset.\n\n# Handle outliers by filtering unreasonable values in columns\nsummary_stats &lt;- sdf_describe(\n  yellow_cab_sdf,\n  cols = c(\n    \"passenger_count\",\n    \"trip_distance\",\n    \"fare_amount\",\n    \"total_amount\"\n  )\n) |&gt;\n  collect()\n\nprint(summary_stats, width=Inf)\n\n\n# Filter out outliers based on summary statistics\nyellow_cab_sdf &lt;- yellow_cab_sdf |&gt;\n  filter(fare_amount &gt; 0 & fare_amount &lt;= 1000,\n         trip_distance &gt; 0 & trip_distance &lt; 100)\n\n\n\n2.6.5 Feauture Engineering\nThis is followed by performing feature engineering, where we derive certain columns such as the hour, day, week, and month of pickup and dropoff. We also derive variables indicating whether the pickup and dropoff occurred on a weekend and whether the pickup was during rush hour.\n\n# Feature Engineering: Create new time-based features (pickup and dropoff times)\nyellow_cab_sdf &lt;- yellow_cab_sdf |&gt;\n  mutate(\n    pickup_hour = hour(tpep_pickup_datetime),  # Hour of the pickup\n    pickup_dayofweek = date_format(tpep_pickup_datetime, \"E\"),  # Day of the week for pickup\n    pickup_week = weekofyear(tpep_pickup_datetime),  # Week of the year for pickup\n    pickup_month = month(tpep_pickup_datetime),  # Month of pickup\n    dropoff_hour = hour(tpep_dropoff_datetime),  # Hour of the dropoff\n    dropoff_dayofweek = date_format(tpep_pickup_datetime, \"E\"),  # Day of the week for dropoff\n    dropoff_week = weekofyear(tpep_dropoff_datetime),  # Week of the year for dropoff\n    dropoff_month = month(tpep_dropoff_datetime),  # Month of dropoff\n    is_weekend_pickup = ifelse(pickup_dayofweek %in% c(\"Sat\", \"Sun\"), 1, 0),  # Weekend pickup flag\n    is_weekend_dropoff = ifelse(dropoff_dayofweek %in% c(\"Sat\", \"Sun\"), 1, 0),  # Weekend dropoff flag\n    is_rush_hour_pickup = ifelse(pickup_hour %in% c(7:9, 16:19), 1, 0)  # Rush hour pickup flag\n  )\n\n\n\n2.6.6 Standardisation\nWe now normalise trip_distance and fare_amount to standardise our data for modelling.\n\n# Normalise features to standardise data for machine learning\nyellow_cab_sdf &lt;- yellow_cab_sdf %&gt;%\n  mutate(\n    trip_distance_scaled = (trip_distance - mean(trip_distance)) / sd(trip_distance),  # Standardise trip distance\n    fare_amount_scaled = (fare_amount - mean(fare_amount)) / sd(fare_amount)  # Standardise fare amount\n  )\n\n# Print the first 5 rows of the updated data\nprint(yellow_cab_sdf, n=5, width = Inf)",
     "crumbs": [
-      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
     ]
   },
   {
     "objectID": "preprocessing_one.html#separating-the-data",
     "href": "preprocessing_one.html#separating-the-data",
-    "title": "2  Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data",
+    "title": "2  Preprocessing and Feature Engineering for Yellow Cab Trip Data",
     "section": "2.7 Separating the data",
     "text": "2.7 Separating the data\nAt this point, I separate my data into two sets: location-related data and other non-location data. I do this because the next few steps involve obtaining additional geospatial variables solely based on pickup and dropoff coordinates. Instead of working with a dataset containing 20-plus columns, I will now only need four: trip_id, latitude, longitude, and is_pickup.\nThe only downside is that I will double the number of rows since pickup and dropoff coordinates for the same trip will now be in separate rows. I justify this decision because the alternative—performing heavy spatial joins twice on the same dataset—is quite resource-intensive. Another alternative would be to save the pickup and dropoff locations in separate datasets. Ultimately, you can make various design decisions based on the resources available to you.\n\n# Separate data into two parts: location and trip metadata\nyellow_cab_sdf &lt;- yellow_cab_sdf %&gt;% \n  sdf_with_unique_id(id = \"trip_id\")  # Add unique trip ID\n\n\n# Create separate DataFrames for pickup and dropoff locations\npickup_sdf &lt;- yellow_cab_sdf %&gt;% \n  transmute(\n    trip_id,\n    latitude = pickup_latitude,\n    longitude = pickup_longitude,\n    is_pickup = 1  # Flag for pickup locations\n  )\n\ndropoff_sdf &lt;- yellow_cab_sdf %&gt;% \n  transmute(\n    trip_id,\n    latitude = dropoff_latitude,\n    longitude = dropoff_longitude,\n    is_pickup = 0  # Flag for dropoff locations\n  )\n\n# Combine pickup and dropoff locations into one DataFrame\nlocations_sdf &lt;- sdf_bind_rows(\n  pickup_sdf,\n  dropoff_sdf\n)\n\nprint(locations_sdf, width = Inf)\n\n\n# Create another DataFrame for non-location trip data (excluding coordinates)\ntrip_data_sdf &lt;- yellow_cab_sdf %&gt;% \n  select(\n    -c(pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude)  # Exclude latitude and longitude\n  )",
     "crumbs": [
-      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
     ]
   },
   {
     "objectID": "preprocessing_one.html#writing-the-data",
     "href": "preprocessing_one.html#writing-the-data",
-    "title": "2  Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data",
+    "title": "2  Preprocessing and Feature Engineering for Yellow Cab Trip Data",
     "section": "2.8 Writing the data",
     "text": "2.8 Writing the data\nFinally, we save the preprocessed data into Delta Lake. While we had no choice in determining the format of the initial dataset, we do have a choice in how we write it. Delta Lake is based on Parquet files but comes with additional metadata.\nThe main difference between Parquet files and CSV files is that Parquet is columnar-based, while CSV is row-based. This offers several advantages to Parquet files, such as faster reading and smaller file sizes. Delta Lake further enhances Parquet files by adding ACID capabilities, among other features. You can find a detailed discussion of the advantages of using Delta tables over Parquet files here.\n\n# Save the location and trip data to disk using Delta Lake format\nsave_file_path_locations_sdf &lt;- file.path(getwd(), \"data\", \"locations_sdf\")\nspark_write_delta(\n  locations_sdf,\n  save_file_path_locations_sdf,\n  mode = \"overwrite\"  # Overwrite existing file if it exists\n)\n\nsave_file_path_trip_data_sdf &lt;- file.path(getwd(), \"data\", \"trip_data_sdf\")\nspark_write_delta(\n  trip_data_sdf,\n  save_file_path_trip_data_sdf,\n  mode = \"overwrite\"  # Overwrite existing file if it exists\n)",
     "crumbs": [
-      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
     ]
   },
   {
     "objectID": "preprocessing_one.html#disconnecting-spark-context",
     "href": "preprocessing_one.html#disconnecting-spark-context",
-    "title": "2  Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data",
+    "title": "2  Preprocessing and Feature Engineering for Yellow Cab Trip Data",
     "section": "2.9 Disconnecting Spark context",
     "text": "2.9 Disconnecting Spark context\nFinally, we disconnect from our Spark context to release the memory being held by Spark.\n\n# Disconnect from Spark session\nspark_disconnect(sc)",
     "crumbs": [
-      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Preprocessing and Feature Engineering for Yellow Cab Trip Data</span>"
     ]
   },
   {
     "objectID": "preprocessing_two.html",
     "href": "preprocessing_two.html",
-    "title": "3  Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R",
+    "title": "3  Processing Vector Data with Apache Sedona and Sparklyr in R",
     "section": "",
     "text": "3.1 Introduction\nIn this part, we are going to use the saved locations data to add pickup and dropoff neighbourhoods. We shall then use the neighbourhoods to obtain the median incomes of the pickup and dropoff neighbourhoods. Income is a proxy for affluence. Humour me by assuming that there is a relationship between the duration of a taxi trip and the affluence of either or both the pickup or dropoff locations.\nWe shall introduce two new datasets: NYC NTA boundaries based on the 2020 census, and NTA median income based on the 2012 ACS. The boundaries data is in vector format, while the income data is in CSV format. To do this, we shall use Apache Sedona to merge the boundaries and income data. We will then perform a spatial join on the coordinates with the boundaries, determining the pickup and dropoff neighbourhoods.\nBy the way, this will be a new file and not the same as the one used for the previous analysis. When working in local mode, I have found that it is more feasible to separate preprocessing into multiple steps. Running too many transformations is likely to result in out-of-memory errors and take a very long time to complete.",
     "crumbs": [
-      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
     ]
   },
   {
     "objectID": "preprocessing_two.html#installing-and-loading-packages",
     "href": "preprocessing_two.html#installing-and-loading-packages",
-    "title": "3  Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R",
+    "title": "3  Processing Vector Data with Apache Sedona and Sparklyr in R",
     "section": "3.2 Installing and loading packages",
     "text": "3.2 Installing and loading packages\n\ninstall.packages(\"apache.sedona\")\n\n\n# Load necessary libraries for Spark, geospatial data, and data manipulation\nlibrary(arrow)\nlibrary(sparklyr)\nlibrary(sf)\nlibrary(dplyr)",
     "crumbs": [
-      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
     ]
   },
   {
     "objectID": "preprocessing_two.html#configuring-spark",
     "href": "preprocessing_two.html#configuring-spark",
-    "title": "3  Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R",
+    "title": "3  Processing Vector Data with Apache Sedona and Sparklyr in R",
     "section": "3.3 Configuring Spark",
     "text": "3.3 Configuring Spark\n\n# Define the Spark directory for temporary files\nspark_dir &lt;- file.path(getwd(), \"data\", \"spark\")\n\nThe configuration will mostly be kept similar to the one in the first file. The main difference is that some of the Delta configurations are explicitly included and not added as a package. This is because Delta and Apache Sedona clash when Delta is installed as a package while creating the Spark context.\nYou will notice a few differences in how the Spark context is set up this time around.\n\n# Create an empty list for Spark configuration settings\nconfig &lt;- list()\n\n# Set Spark configurations for memory and performance optimisation\n\n# Configure some delta specific options\nconfig$spark.sql.extensions &lt;- \"io.delta.sql.DeltaSparkSessionExtension\"\nconfig$spark.sql.catalog.spark_catalog &lt;- \"org.apache.spark.sql.delta.catalog.DeltaCatalog\"\n\n# Use KryoSerializer for better performance\nconfig$spark.serializer &lt;- \"org.apache.spark.serializer.KryoSerializer\"  \n\n# Set temporary directory for Spark\nconfig$`sparklyr.shell.driver-java-options` &lt;- paste0(\"-Djava.io.tmpdir=\", spark_dir)  \n\n# Use compressed Oops for JVM performance\nconfig$`sparklyr.shell.driver-java-options` &lt;- \"-XX:+UseCompressedOops\"  \n\n# Allocate 8GB of memory for the Spark driver\nconfig$`sparklyr.shell.driver-memory` &lt;- '10G'  \n\n# Set fraction of heap memory used for Spark storage\nconfig$spark.memory.fraction &lt;- 0.7  \n\n# Set shuffle partitions (local setting based on workload)\nconfig$spark.sql.shuffle.partitions.local &lt;- 24  \n\n# Set extra memory for driver\nconfig$spark.driver.extraJavaOptions &lt;- \"-Xmx1G\"  \n\n# Enable off-heap memory usage\nconfig$spark.memory.offHeap.enabled &lt;- \"true\" \n\n# Set 4GB for off-heap memory\nconfig$spark.memory.offHeap.size &lt;- \"2g\"  \n\n# Disable shuffle spill to disk\nconfig$spark.sql.shuffle.spill &lt;- \"false\"  \n\n# Periodic garbage collection interval\nconfig$spark.cleaner.periodicGC.interval &lt;- \"60s\"  \n\n# Set max partition size for shuffle files\nconfig$spark.sql.files.maxPartitionBytes &lt;- \"200m\"  \n\n# Enable adaptive query execution\nconfig$spark.sql.adaptive.enabled &lt;- \"true\"",
     "crumbs": [
-      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
     ]
   },
   {
     "objectID": "preprocessing_two.html#instantiating-spark-context",
     "href": "preprocessing_two.html#instantiating-spark-context",
-    "title": "3  Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R",
+    "title": "3  Processing Vector Data with Apache Sedona and Sparklyr in R",
     "section": "3.4 Instantiating spark context",
     "text": "3.4 Instantiating spark context\nAs you can see, when initiating our Spark context, we explicitly include files associated with Delta and Apache Sedona. By doing so, Apache Sedona and Delta do not clash with each other.\n\n# Connect to Spark with the defined configuration and additional packages for geospatial processing\nsc &lt;- spark_connect(\n  master = \"local[*]\",\n  config = config,\n  packages = c(\n    \"io.delta:delta-spark_2.12:3.3.0\",\n    \"org.apache.sedona:sedona-spark-shaded-3.5_2.12:1.7.0\",\n    \"org.datasyslab:geotools-wrapper:1.7.0-28.5\"\n  )\n)",
     "crumbs": [
-      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
     ]
   },
   {
     "objectID": "preprocessing_two.html#loading-apache-sedona",
     "href": "preprocessing_two.html#loading-apache-sedona",
-    "title": "3  Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R",
+    "title": "3  Processing Vector Data with Apache Sedona and Sparklyr in R",
     "section": "3.5 Loading Apache Sedona",
     "text": "3.5 Loading Apache Sedona\nIt is only after initializing our Spark context that we can now load the Apache Sedona library and initialize its context. I know it seems like a lot, and it is, but this is how we can use both Apache Sedona and Delta in R, based on my research.\nWe are now ready to get started!\n\nlibrary(apache.sedona)\ninvoke_static(\n  sc,\n  \"org.apache.sedona.spark.SedonaContext\",\n  \"create\",\n  spark_session(sc),\n  \"r\"\n)\n\n\n# Launch Spark web UI to monitor the Spark session\nspark_web(sc)",
     "crumbs": [
-      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
     ]
   },
   {
     "objectID": "preprocessing_two.html#loading-datasets",
     "href": "preprocessing_two.html#loading-datasets",
-    "title": "3  Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R",
+    "title": "3  Processing Vector Data with Apache Sedona and Sparklyr in R",
     "section": "3.6 Loading datasets",
     "text": "3.6 Loading datasets\n\n3.6.1 Locations data\nWe now read our location data, which is thankfully in Delta format.\n\n# Define the folder containing location data (latitude and longitude of yellow cabs)\nlocations_sdf_parent_folder &lt;- file.path(getwd(), \"data\", \"locations_sdf\")\nlocations_sdf &lt;- spark_read_delta(\n  sc, \n  path = locations_sdf_parent_folder, \n  name = \"locations_sdf\"\n  ) %&gt;% \n    sdf_repartition(24)\n\nprint(locations_sdf, width=Inf)\n\nThe data contains nearly 94 million rows!\n\n# Print the number of rows in the locations SDF (Spark DataFrame)\nsdf_nrow(locations_sdf)\n\n\n\n3.6.2 Median household income by neighbourhood data\nWe now load the average household income by neighbourhood in NYC.\n\n# Load income data (household income by NYC neighbourhood)\nnyc_nta_hh_income_file_path &lt;- file.path(getwd(), \"data\", \"nyc_nta_med_inc\", \"nyc_nta_med_inc.csv\")\nnyc_nta_hh_income &lt;- spark_read_csv(sc, path = nyc_nta_hh_income_file_path, name = \"nyc_nta_hh_income\")\n\n\n# Display the income data\nprint(nyc_nta_hh_income, width = Inf)\n\n\n\n3.6.3 NYC neighbourhoods data\nWe also load the shapefile using Apache Sedona. Note that we point Sedona to the entire folder and not just the specific .shp file, as is the case when reading shapefiles via sf.\n\n# Load the shapefile for NYC neighbourhoods\nny_neighs_pathfile &lt;- file.path(getwd(), \"data\", \"shapefiles\", \"nynta2020_25a\")\nny_neighbourhoods_shp &lt;- spark_read_shapefile(sc, path = ny_neighs_pathfile, name = \"ny_neighbourhoods_shp\")\n\n\n# Display a quick summary of the shapefile data\nny_neighbourhoods_shp %&gt;% glimpse()",
     "crumbs": [
-      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
     ]
   },
   {
     "objectID": "preprocessing_two.html#associating-neighbourhood-with-median-household-income",
     "href": "preprocessing_two.html#associating-neighbourhood-with-median-household-income",
-    "title": "3  Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R",
+    "title": "3  Processing Vector Data with Apache Sedona and Sparklyr in R",
     "section": "3.7 Associating neighbourhood with median household income",
     "text": "3.7 Associating neighbourhood with median household income\nWe now join the income and boundaries data using their common ID.\n\n# Join the neighbourhood shapefile with the income data\nny_neighbourhoods_shp &lt;- ny_neighbourhoods_shp %&gt;%\n  left_join(nyc_nta_hh_income, by = c(\"NTA2020\" = \"GeoID\"))\n\nNow, we need to determine the relevant CRS that our boundaries data uses. If it differs from EPSG:4324, we must convert it so that we can match it with the pickup and dropoff coordinates. I have not found a way to determine the CRS using Apache Sedona, so I use sf for that.\n\n# Read the shapefile as an SF (Simple Features) object for geospatial operations\nny_neighs_sf &lt;- st_read(file.path(ny_neighs_pathfile, \"nynta2020.shp\"))\nst_crs(ny_neighs_sf)\n\nKnowing that it is EPSG:2263, we can now convert it to EPSG:4324.\n\n# Reproject the geometries to a different coordinate reference system (CRS) for consistency\nny_neighbourhoods_shp &lt;- ny_neighbourhoods_shp %&gt;%\n  mutate(\n    geometry = st_transform(\n      geometry,\n      \"epsg:2263\",  # Source CRS\n      \"epsg:4326\",  # Target CRS\n      F\n    )\n  ) %&gt;%\n  select(\n    -c(\n      BoroCode,\n      CountyFIPS,\n      NTAAbbrev,\n      NTAType,\n      CDTA2020,\n      CDTAName,\n      Shape_Leng,\n      Shape_Area\n    )\n  )",
     "crumbs": [
-      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
     ]
   },
   {
     "objectID": "preprocessing_two.html#joining-locations-data-with-neighbourhoods-data",
     "href": "preprocessing_two.html#joining-locations-data-with-neighbourhoods-data",
-    "title": "3  Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R",
+    "title": "3  Processing Vector Data with Apache Sedona and Sparklyr in R",
     "section": "3.8 Joining locations data with neighbourhoods data",
     "text": "3.8 Joining locations data with neighbourhoods data\nBecause the boundaries data is very small (about 2 MB on disk), we can cache it in memory for faster access. Generally, you are encouraged to cache data that is less than 10 MB. We are also broadcasting the neighbourhoods data to improve performance. Broadcasting means that our data is shared in its entirety with every core (in local mode) or executor (in cluster mode) so it is not shuffled when joining. Even if we did not explicitly broadcast our data, it most likely would have been broadcasted automatically due to Adaptive Query Execution (AQE) since we enabled it at the start using the option config$spark.sql.adaptive.enabled &lt;- \"true\". AQE finds the optimal way of conducting joins, and since our neighbourhoods data is minuscule, chances are that it would have been broadcasted to prevent unnecessary shuffling.\n\n# Persist the neighbourhood shapefile in memory for faster access\nny_neighbourhoods_shp &lt;- sdf_broadcast(ny_neighbourhoods_shp)\nsdf_persist(ny_neighbourhoods_shp, storage.level = \"MEMORY_ONLY\")\n\nI have found that it is best to use Spatial SQL when conducting spatial joins or any other spatial analysis using Apache Sedona functions. To do this, we first need to register our dataframes as temporary SQL views. This will be our next step.\n\n# Register the dataframes as temporary SQL views for querying\nlocations_sdf %&gt;% sdf_register(\"locations_sdf_view\")\nny_neighbourhoods_shp %&gt;% sdf_register(\"ny_neighbourhoods_shp_view\")\n\nUpon registration, we can now conduct a spatial join, asking Apache Sedona to find neighbourhoods that contain specific coordinates using the ST_Contains function. You can find documentation on all available Apache Sedona vector functions here.\n\n# Perform a spatial join to associate each location (latitude, longitude) with the corresponding neighbourhood\nlocations_sdf_updated &lt;- sdf_sql(\n  sc,\n  \"\n  SELECT /*+ BROADCAST(b) */ a.*, b.*\n  FROM locations_sdf_view a\n  LEFT JOIN ny_neighbourhoods_shp_view b\n    ON ST_Contains(b.geometry, ST_Point(a.longitude, a.latitude))\n  \"\n)",
     "crumbs": [
-      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
     ]
   },
   {
     "objectID": "preprocessing_two.html#writing-data-to-disk",
     "href": "preprocessing_two.html#writing-data-to-disk",
-    "title": "3  Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R",
+    "title": "3  Processing Vector Data with Apache Sedona and Sparklyr in R",
     "section": "3.9 Writing data to disk",
     "text": "3.9 Writing data to disk\nBefore saving, we remove the geometry column, as Delta cannot write geometry columns. Moreover, there is no need to keep it in the data, as we don’t plan on mapping all the data just yet. If you need to write big data geometry files, consider using the GeoParquet format. You can do so using Spark’s spark_write_geoparquet function or the spark_write_source function with the mode set to GeoParquet.\n\n# Remove the geometry column from the final dataset for further analysis\nlocations_sdf_updated_no_geom &lt;- locations_sdf_updated %&gt;%\n  select(-c(geometry))\n\nOur final data is as shown below. Not too bad for the few lines of code written.\n\n# Print the updated data with all relevant fields (no geometry)\nwithr::with_options(\n  list(pillar.sigfig = 11),\n  print(locations_sdf_updated_no_geom)\n)\n\nWe now write our data to Delta format as usual.\n\n# Define the file path for saving the updated dataset\nsave_locations_sdf_updated_one_filepath &lt;- file.path(getwd(), \"data\", \"locations_sdf_updated_one\")\n\n# Save the updated dataset to Delta format\nspark_write_delta(\n  locations_sdf_updated_no_geom,\n  path = save_locations_sdf_updated_one_filepath\n)\n\nAnd disconnect our spark instance.\n\n# Disconnect from the Spark session once done\nspark_disconnect(sc)",
     "crumbs": [
-      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Chapter 2: Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Processing Vector Data with Apache Sedona and Sparklyr in R</span>"
     ]
   },
   {
     "objectID": "preprocessing_three.html",
     "href": "preprocessing_three.html",
-    "title": "4  Chapter 3: Part One - Processing Raster Data with Apache Sedona and Sparklyr in R",
+    "title": "4  Part One - Processing Raster Data with Apache Sedona and Sparklyr in R",
     "section": "",
     "text": "4.1 Introduction\nWe are going to demonstrate how to obtain information from raster files based on coordinates in this chapter. Let us assume that there is a relationship between the duration of a taxi ride and the population density of an area. We will, therefore, need to extract population density values at each pickup and dropoff location. Such granular data is typically available in raster format, which is why we use WorldPop population density data with a resolution of 1 km by 1 km for this purpose. You can download the data here to follow along.\nThe Spark configuration used for this chapter — and the next one — is identical to that used in Chapter 2, so it has not been included below for brevity’s sake.\nFurthermore, because I need to re-run this code multiple times to render this website, I shall filter only a few rows from the 94 million we previously worked with, as I will be constantly updating this site. In the actual analysis I conducted, however, I used the full dataset.\nYou can find out more about using Apache Sedona for raster manipulation here.",
     "crumbs": [
-      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Chapter 3: Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</span>"
     ]
   },
   {
     "objectID": "preprocessing_three.html#loading-updated-locations-data",
     "href": "preprocessing_three.html#loading-updated-locations-data",
-    "title": "4  Chapter 3: Part One - Processing Raster Data with Apache Sedona and Sparklyr in R",
+    "title": "4  Part One - Processing Raster Data with Apache Sedona and Sparklyr in R",
     "section": "4.2 Loading updated locations data",
     "text": "4.2 Loading updated locations data\nWe start by loading our updated locations data, which now contains household median income by neighbourhood information.\nTo reiterate, I will filter for about 14 million rows here so that I can render this webpage faster. However, sometimes in your analysis, you will find that you have too much data and limited memory, especially when running complex transformations.\nIn such cases, you can filter for specific rows, perform your analysis on that subset, and then append the results to your delta tables. You can repeat this process for another set of rows until you are done.\nFor instance, knowing that I have trip ID values ranging from 0 to about 48,000,000, I would:\n\nFirst filter for rows between 0 and 16 million,\n\nThen 16 million to 32 million,\n\nAnd finally, anything above 32 million,\n\nAppending to the same folder each time.\n\nIf you have enough RAM and cores, though, feel free to run everything at once — go crazy with it!\n\n# Define path to the updated locations Delta table\nlocations_sdf_updated_one &lt;- spark_read_delta(\n  sc,\n  path = file.path(\n    getwd(), \n    \"data\", \n    \"locations_sdf_updated_one\"\n  )\n) |&gt; \n  filter(trip_id &gt; 40000000) %&gt;% \n  sdf_repartition(partitions = 24) %&gt;%  # Repartition for better parallel processing\n  sdf_register(\"locations_sdf_updated_one_view\")  # Register as a temporary view\n\n\n# Check the size of each partition in the dataframe\nlocations_sdf_updated_one %&gt;% sdf_partition_sizes()\n\n\n# Check the number of rows in the dataframe\nlocations_sdf_updated_one |&gt; \n  sdf_nrow()\n\n\nprint(locations_sdf_updated_one, width=Inf)",
     "crumbs": [
-      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Chapter 3: Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</span>"
     ]
   },
   {
     "objectID": "preprocessing_three.html#loading-worldpop-population-density-dataset",
     "href": "preprocessing_three.html#loading-worldpop-population-density-dataset",
-    "title": "4  Chapter 3: Part One - Processing Raster Data with Apache Sedona and Sparklyr in R",
+    "title": "4  Part One - Processing Raster Data with Apache Sedona and Sparklyr in R",
     "section": "4.3 Loading WorldPop Population Density dataset",
     "text": "4.3 Loading WorldPop Population Density dataset\nThe difference when using raster data compared to vector data with Apache Sedona is that we do not import raster in its native format directly. Instead, we must first load it as a binary dataframe, and then convert it into its native raster format within Sedona.\nAlso, bear in mind that Sedona only accepts raster files in the following formats:\n- Arc Info ASCII Grid,\n- GeoTIFF, and\n- NetCDF.\nIf your data is in any other raster format, you will first need to convert it to one of these supported formats.\nI have found GDAL to be particularly useful for converting between different raster formats — definitely a tool to keep in your geospatial toolbox!\n\n# Load the raster data for world population (NYC)\nworld_pop_raster_filepath &lt;- file.path(\n  getwd(),\n  \"data\",\n  \"raster\",\n  \"worldpop\",\n  \"nyc.tif\"\n)\n\n\n# Read the raster data as a binary file\nworld_pop_binary &lt;- spark_read_binary(\n  sc,\n  dir = world_pop_raster_filepath,\n  name = \"worldpop\"\n)\n\nWe obtain raster geometry from our GeoTiff data.\n\n# Register the world population raster as a temporary view\nworld_pop_binary |&gt; sdf_register(\"worldpop_view\")\n\n# Extract raster data from the GeoTiff file using Sedona\nworldpop_sdf &lt;- sdf_sql(\n  sc,\n  \"\n  SELECT RS_FromGeoTiff(content) AS raster FROM worldpop_view\n  \"\n)\n\n# Register the raster data as a temporary view\nworldpop_sdf |&gt; sdf_register(\"worldpop_view\") |&gt; compute()\n\nworldpop_sdf %&gt;% glimpse()\n\nWe can retrieve metadata from our raster file, including:\n- The upper left coordinates of the raster (in the raster’s coordinate system units),\n- The width and height of the raster (in number of pixels),\n- The spatial resolution of each pixel (in units of the raster’s CRS),\n- Any skew or rotation of the raster (if present),\n- The SRID (spatial reference system identifier) of the raster’s coordinate system,\n- The number of bands, and\n- Tile width and height.\nIn our case:\n- Upper left X coordinate: -74.25125\n- Upper left Y coordinate: 40.90792 (both in degrees as the CRS is WGS84)\n- Raster size: 66 x 49 pixels (quite small)\n- Pixel resolution: 0.00833 x -0.00833 degrees\n- Skew: 0 in both x and y directions (i.e., no skew)\n- SRID: 4326 (WGS 84)\n- Number of bands: 2\n- Tile width: 66, Tile height: 15\nAll this information is important when interpreting and working with raster data, especially when performing coordinate-based queries.\n\n# Retrieve and view metadata for the world population raster\nworldpop_sdf_metadata &lt;- sdf_sql(\n  sc,\n  \"\n  SELECT RS_MetaData(raster) FROM worldpop_view\n  \"\n) |&gt; collect()\n\n\n# Glimpse at the metadata information\nworldpop_sdf_metadata |&gt; glimpse()",
     "crumbs": [
-      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Chapter 3: Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</span>"
     ]
   },
   {
     "objectID": "preprocessing_three.html#joining-point-data-with-raster-data",
     "href": "preprocessing_three.html#joining-point-data-with-raster-data",
-    "title": "4  Chapter 3: Part One - Processing Raster Data with Apache Sedona and Sparklyr in R",
+    "title": "4  Part One - Processing Raster Data with Apache Sedona and Sparklyr in R",
     "section": "4.4 Joining point data with raster data",
     "text": "4.4 Joining point data with raster data\nWe now conduct the join using Spatial SQL, as it is much easier and more intuitive than using Apache Sedona’s R functions for raster operations.\nBy leveraging Spatial SQL, we can directly query raster values at specific pickup and dropoff coordinates, simplifying what would otherwise be a more complex process if done via function-based syntax.\n\n# Perform a spatial join between the locations and the world population data to calculate population density\nlocations_sdf_updated_two &lt;- sdf_sql(\n  sc,\n  \"\n  SELECT \n    /*+ BROADCAST(w) */ l.*, RS_Value(w.raster, ST_Point(l.longitude, l.latitude)) AS pop_density\n  FROM\n    locations_sdf_updated_one_view l\n  LEFT JOIN worldpop_view w\n    ON RS_Intersects(w.raster, ST_POINT(l.longitude, l.latitude))\n  \"\n) \n\nWe can now take a look at the result of our join below.\n\n# Glimpse at the updated data with population density\nlocations_sdf_updated_two %&gt;% glimpse()\n\n# Print a preview of the resulting dataframe with specific formatting options\nwithr::with_options(\n  list(pillar.sigfig = 11),\n  print(locations_sdf_updated_two, n=30)\n)",
     "crumbs": [
-      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Chapter 3: Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</span>"
     ]
   },
   {
     "objectID": "preprocessing_three.html#saving-the-data",
     "href": "preprocessing_three.html#saving-the-data",
-    "title": "4  Chapter 3: Part One - Processing Raster Data with Apache Sedona and Sparklyr in R",
+    "title": "4  Part One - Processing Raster Data with Apache Sedona and Sparklyr in R",
     "section": "4.5 Saving the data",
     "text": "4.5 Saving the data\nAnd finally save the data to file.\n\n# Define file path for saving the updated dataframe\nlocations_sdf_updated_two_file_path &lt;- file.path(\n  getwd(), \n  \"data\", \n  \"locations_sdf_updated_two\"\n)\n\n# Save the final dataframe as a Delta table\nspark_write_delta(\n  locations_sdf_updated_two,\n  path = locations_sdf_updated_two_file_path,\n  mode = \"append\"  # Overwrite any existing data at the location\n)\n\n\n# Disconnect from the Spark session\nspark_disconnect(sc)",
     "crumbs": [
-      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Chapter 3: Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</span>"
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</span>"
     ]
   }
 ]
