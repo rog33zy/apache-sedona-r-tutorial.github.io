@@ -1,5 +1,0 @@
-r-cran-stringr
-r-cran-sf
-r-cran-dplyr
-r-cran-magrittr
-r-cran-tidyverse
