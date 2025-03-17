@@ -1,0 +1,22 @@
+# Mac system files
+.DS_Store
+
+# RStudio files
+.Rproj.user/
+
+# Quarto cache/output
+.quarto/
+_site/
+
+# R environment
+renv/
+
+# Logs
+derby.log
+
+# Optional: data (uncomment if you don't want to track datasets)
+data/
+
+# Other
+*.Rproj
+

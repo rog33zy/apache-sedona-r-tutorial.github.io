@@ -1,0 +1,13 @@
+name: geotest
+services:
+    my-geospatial-r:
+        ports:
+            - 8787:8787
+            - 4040:4040
+        environment:
+            - PASSWORD=pass
+        volumes:
+            - ./data:/home/rstudio/data
+        image: my-geospatial-r
+        stdin_open: true
+        tty: true

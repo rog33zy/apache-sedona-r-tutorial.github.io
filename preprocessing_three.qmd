@@ -1,0 +1,320 @@
+---
+title: "Chapter 3: Part One - Processing Raster Data with Apache Sedona and Sparklyr in R"
+subtitle: "Using Raster Data to Determine Population Density Around Pickup and Dropoff Points"
+execute: 
+  eval: false
+  output: true
+format: 
+  html:
+    self-contained: true
+    toc: true
+    df-print: kable
+editor: visual
+---
+
+## Introduction
+
+We are going to demonstrate how to obtain information from **raster files** based on coordinates in this chapter. Let us assume that there is a relationship between the **duration of a taxi ride** and the **population density** of an area. We will, therefore, need to extract population density values at each **pickup and dropoff location**. Such granular data is typically available in **raster format**, which is why we use **WorldPop population density data** with a resolution of **1 km by 1 km** for this purpose. You can download the data [here](https://www.worldpop.org) to follow along.
+
+The **Spark configuration** used for this chapter — and the next one — is **identical** to that used in **Chapter 2**, so it has **not been included below for brevity's sake**.
+
+Furthermore, because I need to **re-run this code multiple times** to render this website, I shall **filter only a few rows** from the **94 million** we previously worked with, as I will be constantly updating this site. **In the actual analysis I conducted, however, I used the full dataset.**
+
+You can find out more about using **Apache Sedona for raster manipulation** [here](https://sedona.apache.org).
+
+```{r}
+#| echo: false
+#| output: false
+
+# Load necessary libraries
+library(arrow)
+library(sparklyr)   # Spark connection and interaction
+library(dplyr)      # Data manipulation
+
+# Install the specified version of Spark (3.5.5)
+spark_install("3.5.5")
+
+# Set environment variables for Java and Spark installation paths
+Sys.setenv("JAVA_HOME"="/Library/Java/JavaVirtualMachines/adoptopenjdk-11.jdk/Contents/Home")
+Sys.setenv("SPARK_HOME"=spark_home_dir(version = "3.5.5"))
+
+# Define the working directory
+working_dir <- "/Users/rodgersiradukunda/Library/CloudStorage/OneDrive-TheUniversityofLiverpool/geospatial_docker"
+setwd(working_dir)
+
+# Define the path for Spark data
+spark_dir <- file.path(getwd(), "data", "spark")
+
+# Create an empty list for Spark configuration settings
+config <- list()
+
+# Set Spark configurations for memory and performance optimisation
+
+# Configure some delta specific options
+config$spark.sql.extensions <- "io.delta.sql.DeltaSparkSessionExtension"
+config$spark.sql.catalog.spark_catalog <- "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+
+# Use KryoSerializer for better performance
+config$spark.serializer <- "org.apache.spark.serializer.KryoSerializer"  
+
+# Set temporary directory for Spark
+config$`sparklyr.shell.driver-java-options` <- paste0("-Djava.io.tmpdir=", spark_dir)  
+
+# Use compressed Oops for JVM performance
+config$`sparklyr.shell.driver-java-options` <- "-XX:+UseCompressedOops"  
+
+# Allocate 8GB of memory for the Spark driver
+config$`sparklyr.shell.driver-memory` <- '10G'  
+
+# Set fraction of heap memory used for Spark storage
+config$spark.memory.fraction <- 0.7  
+
+# Set shuffle partitions (local setting based on workload)
+config$spark.sql.shuffle.partitions.local <- 24  
+
+# Set extra memory for driver
+config$spark.driver.extraJavaOptions <- "-Xmx1G"  
+
+# Enable off-heap memory usage
+config$spark.memory.offHeap.enabled <- "true" 
+
+# Set 4GB for off-heap memory
+config$spark.memory.offHeap.size <- "2g"  
+
+# Disable shuffle spill to disk
+config$spark.sql.shuffle.spill <- "false"  
+
+# Periodic garbage collection interval
+config$spark.cleaner.periodicGC.interval <- "60s"  
+
+# Set max partition size for shuffle files
+config$spark.sql.files.maxPartitionBytes <- "200m"  
+
+# Enable adaptive query execution
+config$spark.sql.adaptive.enabled <- "true" 
+
+
+# Connect to Spark using the specified configuration
+sc <- spark_connect(
+  master = "local[*]",  # Run locally on all cores
+  config = config,  # Apply the custom configuration
+  packages = c(
+    "io.delta:delta-spark_2.12:3.3.0",   # Delta Lake Spark package
+    "org.apache.sedona:sedona-spark-shaded-3.5_2.12:1.7.0",  # Apache Sedona for geospatial processing
+    "org.datasyslab:geotools-wrapper:1.7.0-28.5"  # GeoTools wrapper for geospatial processing
+  )
+)
+
+# Load the Apache Sedona package
+library(apache.sedona)
+
+# Initialize Sedona context for R
+invoke_static(
+  sc,
+  "org.apache.sedona.spark.SedonaContext",
+  "create",
+  spark_session(sc),
+  "r"
+)
+
+# Start Spark's web UI for monitoring
+spark_web(sc)
+
+```
+
+## Loading updated locations data
+
+We start by **loading our updated locations data**, which now contains **household median income by neighbourhood** information.
+
+To reiterate, I will **filter for about 14 million rows** here so that I can **render this webpage faster**. However, sometimes in your analysis, you will find that you have **too much data and limited memory**, especially when running **complex transformations**.
+
+In such cases, you can **filter for specific rows**, perform your analysis on that subset, and then **append the results to your delta tables**. You can repeat this process for another set of rows until you are done.
+
+For instance, knowing that I have **trip ID values ranging from 0 to about 48,000,000**, I would:
+
+-   First filter for rows between **0 and 16 million**,\
+-   Then **16 million to 32 million**,\
+-   And finally, anything **above 32 million**,\
+-   **Appending to the same folder** each time.
+
+If you have **enough RAM and cores**, though, **feel free to run everything at once** — go crazy with it!
+
+```{r}
+# Define path to the updated locations Delta table
+locations_sdf_updated_one <- spark_read_delta(
+  sc,
+  path = file.path(
+    getwd(), 
+    "data", 
+    "locations_sdf_updated_one"
+  )
+) |> 
+  filter(trip_id > 40000000) %>% 
+  sdf_repartition(partitions = 24) %>%  # Repartition for better parallel processing
+  sdf_register("locations_sdf_updated_one_view")  # Register as a temporary view
+```
+
+```{r}
+# Check the size of each partition in the dataframe
+locations_sdf_updated_one %>% sdf_partition_sizes()
+```
+
+```{r}
+# Check the number of rows in the dataframe
+locations_sdf_updated_one |> 
+  sdf_nrow()
+```
+
+```{r}
+print(locations_sdf_updated_one, width=Inf)
+```
+
+## Loading WorldPop Population Density dataset
+
+The difference when using **raster data** compared to vector data with **Apache Sedona** is that we **do not import raster in its native format directly**. Instead, we must **first load it as a binary dataframe**, and **then convert it into its native raster format** within Sedona.
+
+Also, **bear in mind** that **Sedona only accepts raster files** in the following formats:\
+- **Arc Info ASCII Grid**,\
+- **GeoTIFF**, and\
+- **NetCDF**.
+
+If your data is in **any other raster format**, you will first need to **convert it to one of these supported formats**.
+
+I have found **GDAL** to be **particularly useful for converting between different raster formats** — definitely a tool to keep in your geospatial toolbox!
+
+```{r}
+# Load the raster data for world population (NYC)
+world_pop_raster_filepath <- file.path(
+  getwd(),
+  "data",
+  "raster",
+  "worldpop",
+  "nyc.tif"
+)
+```
+
+```{r}
+# Read the raster data as a binary file
+world_pop_binary <- spark_read_binary(
+  sc,
+  dir = world_pop_raster_filepath,
+  name = "worldpop"
+)
+```
+
+We obtain raster geometry from our GeoTiff data.
+
+```{r}
+# Register the world population raster as a temporary view
+world_pop_binary |> sdf_register("worldpop_view")
+
+# Extract raster data from the GeoTiff file using Sedona
+worldpop_sdf <- sdf_sql(
+  sc,
+  "
+  SELECT RS_FromGeoTiff(content) AS raster FROM worldpop_view
+  "
+)
+
+# Register the raster data as a temporary view
+worldpop_sdf |> sdf_register("worldpop_view") |> compute()
+
+worldpop_sdf %>% glimpse()
+```
+
+We can **retrieve metadata** from our raster file, including:\
+- The **upper left coordinates** of the raster (in the raster’s coordinate system units),\
+- The **width and height** of the raster (in number of pixels),\
+- The **spatial resolution** of each pixel (in units of the raster’s CRS),\
+- Any **skew or rotation** of the raster (if present),\
+- The **SRID** (spatial reference system identifier) of the raster’s coordinate system,\
+- The **number of bands**, and\
+- **Tile width and height**.
+
+In our case:\
+- **Upper left X coordinate**: `-74.25125`\
+- **Upper left Y coordinate**: `40.90792` (both in degrees as the CRS is WGS84)\
+- **Raster size**: `66 x 49` pixels (quite small)\
+- **Pixel resolution**: `0.00833 x -0.00833` degrees\
+- **Skew**: `0` in both x and y directions (i.e., no skew)\
+- **SRID**: `4326` (WGS 84)\
+- **Number of bands**: `2`\
+- **Tile width**: `66`, **Tile height**: `15`
+
+All this information is important when **interpreting and working with raster data**, especially when performing **coordinate-based queries**.
+
+```{r}
+# Retrieve and view metadata for the world population raster
+worldpop_sdf_metadata <- sdf_sql(
+  sc,
+  "
+  SELECT RS_MetaData(raster) FROM worldpop_view
+  "
+) |> collect()
+```
+
+```{r}
+# Glimpse at the metadata information
+worldpop_sdf_metadata |> glimpse()
+```
+
+## Joining point data with raster data
+
+We now **conduct the join using Spatial SQL**, as it is much easier and more intuitive than using Apache Sedona's R functions for raster operations.
+
+By leveraging **Spatial SQL**, we can directly query raster values at specific pickup and dropoff coordinates, simplifying what would otherwise be a more complex process if done via function-based syntax.
+
+```{r}
+# Perform a spatial join between the locations and the world population data to calculate population density
+locations_sdf_updated_two <- sdf_sql(
+  sc,
+  "
+  SELECT 
+    /*+ BROADCAST(w) */ l.*, RS_Value(w.raster, ST_Point(l.longitude, l.latitude)) AS pop_density
+  FROM
+    locations_sdf_updated_one_view l
+  LEFT JOIN worldpop_view w
+    ON RS_Intersects(w.raster, ST_POINT(l.longitude, l.latitude))
+  "
+) 
+```
+
+We can now take a look at the result of our join below.
+
+```{r}
+# Glimpse at the updated data with population density
+locations_sdf_updated_two %>% glimpse()
+
+# Print a preview of the resulting dataframe with specific formatting options
+withr::with_options(
+  list(pillar.sigfig = 11),
+  print(locations_sdf_updated_two, n=30)
+)
+```
+
+## Saving the data
+
+And finally save the data to file.
+
+```{r}
+#| eval: false
+
+# Define file path for saving the updated dataframe
+locations_sdf_updated_two_file_path <- file.path(
+  getwd(), 
+  "data", 
+  "locations_sdf_updated_two"
+)
+
+# Save the final dataframe as a Delta table
+spark_write_delta(
+  locations_sdf_updated_two,
+  path = locations_sdf_updated_two_file_path,
+  mode = "append"  # Overwrite any existing data at the location
+)
+```
+
+```{r}
+# Disconnect from the Spark session
+spark_disconnect(sc)
+```

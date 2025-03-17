@@ -1,0 +1,442 @@
+---
+title: "Chapter One: Preprocessing and Feature Engineering for Yellow Cab Trip Data"
+execute: 
+  eval: false
+  output: true
+format: 
+  html:
+    self-contained: true
+    toc: true
+    df-print: kable
+editor: visual
+---
+
+## Introduction
+
+In this chapter, we shall demonstrate how to perform basic data cleaning and feature engineering using Sparklyr, and save the data as Delta tables.
+
+The primary dataset was downloaded from Kaggle [here](https://www.kaggle.com/datasets/elemento/nyc-yellow-taxi-trip-data?resource=download). It provides information about taxi trips, including the pickup and dropoff times and locations. Our goal is to enrich it using additional data obtained from geospatial sources, and leave the rest to you to perform analysis and determine how best to predict taxi trip durations.
+
+The overarching goal is to show you how to go about using **Delta Lake**, **Sparklyr**, **Apache Sedona**, and **R** for big data geospatial analysis when you only have an ordinary computer at your disposal.
+
+For my actual analysis, I used the entire 7.4 GB dataset provided, containing about **48 million rows**. However, for this published tutorial, I use less data so as to timely publish and update this website. For reference, I am using an **M1 MacBook** with **16 GB of RAM** and **500 GB of disk space**. 
+
+If you have 8 GB of RAM, I would suggest that you use one of the four datasets available, as they are also relatively massive with about 12 million rows each!
+
+Anyhow, enough talking — let us get to work.
+
+## Installing and loading packages
+
+We shall start by installing and loading the necessary libraries: `arrow`, `sparklyr`, and `dplyr`.
+
+```{r}
+#| eval: false
+
+install.packages("arrow")
+install.packages("sparklyr")
+```
+
+We use `sparklyr` to interface with [Apache Spark](https://aws.amazon.com/what-is/apache-spark/) in R, allowing us to work efficiently with large datasets using distributed computing. The `dplyr` package provides powerful data manipulation functions that integrate seamlessly with Spark, making it easier to transform and summarise data. Finally, we load `arrow`, which enhances Spark’s [performance](https://arrow.apache.org/blog/2019/01/25/r-spark-improvements/) when copying, collecting, and transforming data, thereby improving the overall efficiency of our analysis.
+
+```{r}
+#| output: false
+
+# Load required libraries
+library(arrow)      # Handle efficient data exchange between R and Spark
+library(sparklyr)   # Spark connection and data manipulation
+library(dplyr)      # Data manipulation functions
+```
+
+We can now use `sparklyr` to download and install Spark. In this tutorial, we shall install **Spark version 3.5.5** and create the `JAVA_HOME` and `SPARK_HOME` environment variables. Although you can initialise these variables system-wide, it is often easier to set them within your working file, especially if you have multiple installations of Spark and Java on your system.
+
+Whilst Spark 3.5 is compiled for Java 8, 11, and 17, I would recommend using **Java 11**, as it has proven to be more stable in my experience compared to the other two versions. Additionally, I cannot overemphasise the importance of downloading a Java version that is **natively designed for your system's processor**. As previously stated, I own an M1 MacBook (ARM 64-bit), so I previously encountered memory issues when using Java designed for Intel processors (x86 64-bit). Switching to an ARM-based Java greatly improved the performance of my code.
+
+You can freely download an appropriate Java version for your machine [here](https://www.azul.com/downloads/?package=jdk#zulu).
+
+## Installing Spark and setting environment variables
+
+```{r}
+# Install and set up Spark environment
+spark_install("3.5.5")  # Install the specific version of Spark (3.5.5)
+
+# Set Java and Spark home directory paths
+Sys.setenv("JAVA_HOME"="/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home")  # Set Java home directory for Spark
+Sys.setenv("SPARK_HOME"=spark_home_dir(version = "3.5.5"))  # Set Spark home directory
+```
+
+```{r}
+#| echo: false
+
+# Define working directory path for file management
+working_dir <- "/Users/rodgersiradukunda/Library/CloudStorage/OneDrive-TheUniversityofLiverpool/geospatial_docker"
+setwd(working_dir)  # Set the working directory
+```
+
+We shall now create a folder where Spark will store temporary files. By default, Spark stores these files in memory, but in our case, we want them to be stored on disk. This is why we specify a `spark_dir` path to direct Spark to use disk storage for its temporary file storage.
+
+## Configuring Spark
+
+```{r}
+# Define path for Spark data
+spark_dir <- file.path(getwd(), "data", "spark")
+```
+
+We now initialise a list and provide configuration settings for Spark. This is arguably one of the most important steps, as it determines both how fast your data is processed and whether it is successfully processed. A typical Spark process involves reading data from files (for instance), processing it, transmitting it between executors, and then writing it back to files. All of this is made possible by **serialising and deserialising** the data into bytes. Naturally, your choice of serializer will heavily influence the performance of your application. Here, we use **Kryo serialisation**, as it is *"significantly faster and more compact than Java serialisation"* ([source](https://spark.apache.org/docs/latest/tuning.html)).
+
+Spark runs on the **Java Virtual Machine (JVM)**, and **Java heap space** refers to the memory allocated to the JVM during runtime for storing objects and data. The heap memory is divided into **Spark memory (M)**, **reserved memory**, and **user memory**. Spark memory itself is divided into two parts: **execution** and **storage (R)**. Execution memory is used for computations such as shuffles, joins, sorts, and aggregations. Storage memory, on the other hand, is used for caching and propagating internal data across the cluster (when running in cluster mode). Read more about this [here](https://spark.apache.org/docs/latest/tuning.html).
+
+In our case, since we are running in **local mode**, we set the JVM heap space to **10GB** using `sparklyr.shell.driver-memory`. We then allocate **70% of the JVM heap space** to Spark memory (M) using the `spark.memory.fraction` option. This means **7GB** is reserved for both storage and execution. By default, **50% of M** (i.e., **3.5GB**) is reserved for storage (R). Although this can be adjusted using `spark.memory.storageFraction`, we leave it at the default here. Importantly, when no execution memory is needed, R can make use of the entire 7GB.
+
+Other configuration choices we make include enabling the storage of **2GB of data off-heap** (i.e., outside the JVM) using the settings `spark.memory.offHeap.enabled = "true"` and `spark.memory.offHeap.size = "2g"`. We also instruct Spark **not to write intermediate shuffle data to disk**—to avoid I/O bottlenecks—by setting `spark.sql.shuffle.spill = "false"`.
+
+To manage memory efficiently, we enable **periodic garbage collection every 60 seconds** with `spark.cleaner.periodicGC.interval = "60s"`, which helps reclaim unused space. Additionally, we set our **maximum partition file size to 200MB**. It is recommended to keep this between **128MB and 200MB**, depending on your dataset size and cluster resources ([source](https://www.chaosgenius.io/blog/spark-performance-tuning/)).
+
+Finally, we enable **Adaptive Query Execution (AQE)**, which allows Spark to automatically optimise query plans during runtime, such as when performing joins, thereby improving performance without manual interference ([source](https://www.databricks.com/blog/2020/05/29/adaptive-query-execution-speeding-up-spark-sql-at-runtime.html)).
+
+Please update the configuration settings based on your available RAM.
+
+```{r}
+# Create an empty list for Spark configuration settings
+config <- list()
+
+# Set Spark configurations for memory and performance optimisation
+
+# Use KryoSerializer for better performance
+config$spark.serializer <- "org.apache.spark.serializer.KryoSerializer"  
+
+# Set temporary directory for Spark
+config$`sparklyr.shell.driver-java-options` <- paste0("-Djava.io.tmpdir=", spark_dir)  
+
+# Use compressed Oops for JVM performance
+config$`sparklyr.shell.driver-java-options` <- "-XX:+UseCompressedOops"  
+
+# Allocate 10GB of memory for the Spark driver
+config$`sparklyr.shell.driver-memory` <- '10G'  
+
+# Set fraction of heap memory used for Spark storage
+config$spark.memory.fraction <- 0.7  
+
+# Set shuffle partitions (local setting based on workload)
+config$spark.sql.shuffle.partitions.local <- 24  
+
+# Set extra memory for driver
+config$spark.driver.extraJavaOptions <- "-Xmx1G"  
+
+# Enable off-heap memory usage
+config$spark.memory.offHeap.enabled <- "true" 
+
+# Set 4GB for off-heap memory
+config$spark.memory.offHeap.size <- "2g"  
+
+# Disable shuffle spill to disk
+config$spark.sql.shuffle.spill <- "false"  
+
+# Periodic garbage collection interval
+config$spark.cleaner.periodicGC.interval <- "60s"  
+
+# Set max partition size for shuffle files
+config$spark.sql.files.maxPartitionBytes <- "200m"  
+
+# Enable adaptive query execution
+config$spark.sql.adaptive.enabled <- "true"  
+```
+
+After configuring our setup, we now connect to Spark. Note that we have also instructed Spark to install the **Delta** package. This is a necessary step if you want to read from or write to Delta tables, which are commonly used for managing large-scale data with [ACID transaction](https://docs.databricks.com/aws/en/lakehouse/acid) support among many other advantages.
+
+```{r}
+# Connect to Spark with the specified configurations
+sc <- spark_connect(
+  master = "local[*]",  # Use all available cores for local execution
+  config = config,      # Use the specified configurations
+  packages = "delta"    # Install the Delta Lake package for optimised storage
+)
+```
+
+I recommend using the **Spark Web User Interface (UI)** to track metrics associated with your Spark application. You can access it as shown below.
+
+```{r}
+# Open Spark web UI for monitoring the connection
+spark_web(sc)
+```
+
+After successfully setting up a Spark context, we now turn to loading our data. We start by specifying the path where the files are located. Note that we are instructing Spark to read all CSV files within the `yellow_tripdata2` subfolder.
+
+Additionally, we organise our data into **24 partitions**. We chose 24 because it is **three times the number of our total cores (8)**. This approach helps ensure parallelism during processing and prevents data skew, which could otherwise slow down our computations.
+
+## Loading the data
+
+```{r}
+# Define the path for the yellow cab data
+yellow_cab_parent_folder <- file.path(getwd(), "data", "yellow_tripdata2")
+yellow_cab_filepattern <- file.path(yellow_cab_parent_folder, "*csv")
+
+# Read the yellow cab data from CSV files into a Spark DataFrame
+yellow_cab_sdf <- spark_read_csv(
+  sc, 
+  path = yellow_cab_filepattern, 
+  name = "yellow_cab_sdf"
+  ) %>% 
+    sdf_repartition(24)
+
+# Print the structure of the DataFrame for inspection
+print(yellow_cab_sdf, width = Inf)
+```
+
+Looking at the number of partitions, we see that each core will be responsible for approximately an equal number of rows for each task. This ensures that all cores are doing an equal amount of work, without any being overworked.
+
+```{r}
+# Number of rows per each partition
+yellow_cab_sdf %>% 
+  sdf_partition_sizes()
+```
+
+Below we can see how many columns and rows our data has.
+
+```{r}
+# Get the number of rows and columns in the DataFrame
+sdf_ncol(yellow_cab_sdf)
+sdf_nrow(yellow_cab_sdf)
+```
+
+## Preprocessing
+
+### Updating the schema
+
+Looking at the schema of our data, we can see that all the variables are in character format. This is not ideal, both for processing and memory allocation, as strings take up a significant amount of space.
+
+```{r}
+#| eval: false
+
+# Print the schema (column types) of the DataFrame
+sdf_schema(yellow_cab_sdf)
+```
+
+We shall, therefore, update the schema accordingly.
+
+```{r}
+# Data cleaning: Convert columns to appropriate types and handle missing values
+yellow_cab_sdf <- yellow_cab_sdf |>
+  mutate(
+    VendorID = as.integer(VendorID),  # Convert VendorID to integer
+    tpep_pickup_datetime = to_timestamp(tpep_pickup_datetime),  # Convert to timestamp
+    tpep_dropoff_datetime = to_timestamp(tpep_dropoff_datetime),  # Convert to timestamp
+    passenger_count = as.integer(passenger_count),  # Convert to integer
+    trip_distance = as.numeric(trip_distance),  # Convert to numeric
+    pickup_longitude = as.numeric(pickup_longitude),  # Convert to numeric
+    pickup_latitude = as.numeric(pickup_latitude),  # Convert to numeric
+    RateCodeID = as.character(RateCodeID),  # Convert to character
+    store_and_fwd_flag = as.character(store_and_fwd_flag),  # Convert to character
+    dropoff_longitude = as.numeric(dropoff_longitude),  # Convert to numeric
+    dropoff_latitude = as.numeric(dropoff_latitude),  # Convert to numeric
+    payment_type = as.character(payment_type),  # Convert to character
+    fare_amount = as.numeric(fare_amount),  # Convert to numeric
+    extra = as.numeric(extra),  # Convert to numeric
+    mta_tax = as.numeric(mta_tax),  # Convert to numeric
+    tip_amount = as.numeric(tip_amount),  # Convert to numeric
+    tolls_amount = as.numeric(tolls_amount),  # Convert to numeric
+    improvement_surcharge = as.numeric(improvement_surcharge),  # Convert to numeric
+    total_amount = as.numeric(total_amount)  # Convert to numeric
+  )
+```
+
+### Missing values
+
+We now want to check if we have any missing values. By calling **`collect()`**, we are triggering an **action**. By default, Spark performs **lazy loading**, meaning it does not execute every line of code immediately. The code is only executed when actions are performed, such as **`collect()`** and **`count()`**.
+
+By calling `collect()`, we will change the class of the resulting object into an R dataframe rather than a Spark dataframe.
+
+```{r}
+# Handle missing values: Summarise the missing values in each column
+missing_values_by_col <- yellow_cab_sdf |>
+  summarise_all(~ sum(as.integer(is.na(.)))) |>
+  collect()
+
+# Print missing values summary
+print(missing_values_by_col, width = Inf)
+```
+
+```{r}
+# print classes of yellow_cab_sdf and missing_values_by_col
+print(yellow_cab_sdf %>% class())
+print(missing_values_by_col %>% class())
+```
+
+We can see that the only column with missing values is **`improvement_surcharge`**. We shall impute the missing data using the median value of the column and create a new column called **`improvement_surcharge_imputed`**.
+
+
+```{r}
+# Impute missing values for specific columns (e.g., "improvement_surcharge")
+input_cols <- c("improvement_surcharge")
+output_cols <- paste0(input_cols, "_imputed")
+
+yellow_cab_sdf <- yellow_cab_sdf |>
+  ft_imputer(input_cols = input_cols,   # Specify input columns
+             output_cols = output_cols,  # Specify output columns
+             strategy = "median")  # Use median strategy for imputation
+```
+
+### Duplicates
+
+We shall now **remove duplicates** based on specific columns.
+
+```{r}
+# Remove duplicate rows based on specific columns
+yellow_cab_sdf <- sdf_drop_duplicates(
+  yellow_cab_sdf,
+  cols = c(
+    "VendorID",
+    "tpep_pickup_datetime",
+    "tpep_dropoff_datetime",
+    "pickup_longitude",
+    "pickup_latitude",
+    "dropoff_longitude",
+    "dropoff_latitude"
+  )
+)
+```
+
+### Outliers
+
+We shall also handle **outliers** by filtering out unreasonable values in our dataset.
+
+```{r}
+# Handle outliers by filtering unreasonable values in columns
+summary_stats <- sdf_describe(
+  yellow_cab_sdf,
+  cols = c(
+    "passenger_count",
+    "trip_distance",
+    "fare_amount",
+    "total_amount"
+  )
+) |>
+  collect()
+
+print(summary_stats, width=Inf)
+```
+
+```{r}
+# Filter out outliers based on summary statistics
+yellow_cab_sdf <- yellow_cab_sdf |>
+  filter(fare_amount > 0 & fare_amount <= 1000,
+         trip_distance > 0 & trip_distance < 100)
+```
+
+### Feauture Engineering
+
+This is followed by performing **feature engineering**, where we derive certain columns such as the **hour**, **day**, **week**, and **month** of pickup and dropoff. We also derive variables indicating whether the pickup and dropoff occurred on a weekend and whether the pickup was during rush hour.
+
+```{r}
+# Feature Engineering: Create new time-based features (pickup and dropoff times)
+yellow_cab_sdf <- yellow_cab_sdf |>
+  mutate(
+    pickup_hour = hour(tpep_pickup_datetime),  # Hour of the pickup
+    pickup_dayofweek = date_format(tpep_pickup_datetime, "E"),  # Day of the week for pickup
+    pickup_week = weekofyear(tpep_pickup_datetime),  # Week of the year for pickup
+    pickup_month = month(tpep_pickup_datetime),  # Month of pickup
+    dropoff_hour = hour(tpep_dropoff_datetime),  # Hour of the dropoff
+    dropoff_dayofweek = date_format(tpep_pickup_datetime, "E"),  # Day of the week for dropoff
+    dropoff_week = weekofyear(tpep_dropoff_datetime),  # Week of the year for dropoff
+    dropoff_month = month(tpep_dropoff_datetime),  # Month of dropoff
+    is_weekend_pickup = ifelse(pickup_dayofweek %in% c("Sat", "Sun"), 1, 0),  # Weekend pickup flag
+    is_weekend_dropoff = ifelse(dropoff_dayofweek %in% c("Sat", "Sun"), 1, 0),  # Weekend dropoff flag
+    is_rush_hour_pickup = ifelse(pickup_hour %in% c(7:9, 16:19), 1, 0)  # Rush hour pickup flag
+  )
+```
+
+### Standardisation
+
+We now normalise `trip_distance` and `fare_amount` to standardise our data for modelling.
+
+```{r}
+# Normalise features to standardise data for machine learning
+yellow_cab_sdf <- yellow_cab_sdf %>%
+  mutate(
+    trip_distance_scaled = (trip_distance - mean(trip_distance)) / sd(trip_distance),  # Standardise trip distance
+    fare_amount_scaled = (fare_amount - mean(fare_amount)) / sd(fare_amount)  # Standardise fare amount
+  )
+
+# Print the first 5 rows of the updated data
+print(yellow_cab_sdf, n=5, width = Inf)
+```
+
+## Separating the data
+
+At this point, I separate my data into two sets: **location-related data** and other **non-location data**. I do this because the next few steps involve obtaining additional **geospatial variables** solely based on pickup and dropoff coordinates. Instead of working with a dataset containing 20-plus columns, I will now only need four: **`trip_id`**, **`latitude`**, **`longitude`**, and **`is_pickup`**.
+
+The only downside is that I will double the number of rows since pickup and dropoff coordinates for the same trip will now be in separate rows. I justify this decision because the alternative—performing heavy spatial joins twice on the same dataset—is quite resource-intensive. Another alternative would be to save the pickup and dropoff locations in separate datasets. Ultimately, you can make various design decisions based on the resources available to you.
+
+```{r}
+# Separate data into two parts: location and trip metadata
+yellow_cab_sdf <- yellow_cab_sdf %>% 
+  sdf_with_unique_id(id = "trip_id")  # Add unique trip ID
+```
+
+```{r}
+# Create separate DataFrames for pickup and dropoff locations
+pickup_sdf <- yellow_cab_sdf %>% 
+  transmute(
+    trip_id,
+    latitude = pickup_latitude,
+    longitude = pickup_longitude,
+    is_pickup = 1  # Flag for pickup locations
+  )
+
+dropoff_sdf <- yellow_cab_sdf %>% 
+  transmute(
+    trip_id,
+    latitude = dropoff_latitude,
+    longitude = dropoff_longitude,
+    is_pickup = 0  # Flag for dropoff locations
+  )
+
+# Combine pickup and dropoff locations into one DataFrame
+locations_sdf <- sdf_bind_rows(
+  pickup_sdf,
+  dropoff_sdf
+)
+
+print(locations_sdf, width = Inf)
+```
+
+```{r}
+# Create another DataFrame for non-location trip data (excluding coordinates)
+trip_data_sdf <- yellow_cab_sdf %>% 
+  select(
+    -c(pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude)  # Exclude latitude and longitude
+  )
+```
+
+## Writing the data
+
+Finally, we save the preprocessed data into **Delta Lake**. While we had no choice in determining the format of the initial dataset, we do have a choice in how we write it. Delta Lake is based on Parquet files but comes with additional metadata.
+
+The main difference between Parquet files and CSV files is that Parquet is columnar-based, while CSV is row-based. This offers several advantages to Parquet files, such as faster reading and smaller file sizes. Delta Lake further enhances Parquet files by adding ACID capabilities, among other features. You can find a detailed discussion of the advantages of using Delta tables over Parquet files [here](https://delta.io/blog/delta-lake-vs-parquet-comparison/).
+
+```{r}
+#| eval: false
+
+# Save the location and trip data to disk using Delta Lake format
+save_file_path_locations_sdf <- file.path(getwd(), "data", "locations_sdf")
+spark_write_delta(
+  locations_sdf,
+  save_file_path_locations_sdf,
+  mode = "overwrite"  # Overwrite existing file if it exists
+)
+
+save_file_path_trip_data_sdf <- file.path(getwd(), "data", "trip_data_sdf")
+spark_write_delta(
+  trip_data_sdf,
+  save_file_path_trip_data_sdf,
+  mode = "overwrite"  # Overwrite existing file if it exists
+)
+```
+
+## Disconnecting Spark context
+
+Finally, we disconnect from our Spark context to release the memory being held by Spark.
+
+```{r}
+# Disconnect from Spark session
+spark_disconnect(sc)
+```
