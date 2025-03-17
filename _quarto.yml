@@ -18,6 +18,8 @@ book:
     - preprocessing_one.qmd
     - preprocessing_two.qmd
     - preprocessing_three.qmd
+    - preprocessing_four.qmd
+    - preprocessing_five.qmd
 
 format:
   html:
