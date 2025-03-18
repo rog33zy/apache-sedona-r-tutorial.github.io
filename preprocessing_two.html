@@ -232,9 +232,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="introduction" class="level2" data-number="3.1">
 <h2 data-number="3.1" class="anchored" data-anchor-id="introduction"><span class="header-section-number">3.1</span> Introduction</h2>
-<p>In this part, we are going to use the <strong>saved locations data</strong> to add <strong>pickup</strong> and <strong>dropoff neighbourhoods</strong>. We shall then use the neighbourhoods to obtain the <strong>median incomes</strong> of the pickup and dropoff neighbourhoods. Income is a proxy for <strong>affluence</strong>. Humour me by assuming that there is a relationship between the <strong>duration of a taxi trip</strong> and the affluence of either or both the pickup or dropoff locations.</p>
-<p>We shall introduce two new datasets: <strong>NYC NTA boundaries</strong> based on the 2020 census, and <strong>NTA median income</strong> based on the 2012 ACS. The boundaries data is in <strong>vector format</strong>, while the income data is in <strong>CSV format</strong>. To do this, we shall use <strong>Apache Sedona</strong> to merge the boundaries and income data. We will then perform a <strong>spatial join</strong> on the coordinates with the boundaries, determining the pickup and dropoff neighbourhoods.</p>
-<p>By the way, this will be a <strong>new file</strong> and not the same as the one used for the previous analysis. When working in local mode, I have found that it is more feasible to <strong>separate preprocessing</strong> into multiple steps. Running too many transformations is likely to result in <strong>out-of-memory errors</strong> and take a very long time to complete.</p>
+<p>In this part, we are going to use the saved locations data to determine the <strong>pickup</strong> and <strong>dropoff neighbourhoods</strong> associated with each trip. We shall then use these additional data to obtain the <strong>median household incomes</strong> of the pickup and dropoff neighbourhoods. We use income as a proxy for <strong>affluence</strong>. Humour me by assuming that there is a relationship between the duration of a taxi trip and the affluence of either or both the pickup or dropoff locations.</p>
+<p>We shall introduce two new datasets: <strong>NYC Neighbourhood Tabulation Areas (NTAs) boundaries</strong> based on the <a href="https://s-media.nyc.gov/agencies/dcp/assets/files/zip/data-tools/bytes/nynta2020_25a.zip">2020 census</a>, and <strong>NTA household median income</strong> based on the <a href="https://s-media.nyc.gov/agencies/dcp/assets/files/excel/data-tools/census/acs/Econ_1822_NTA.xlsx">2022 American Community Survey (ACS)</a>. The boundaries data is in <strong>vector format</strong>, while the income data is in <strong>CSV format</strong> (originally .xlsx but filtered for GeoID and MdHHIncE columns, then saved as CSV). To do this, we shall use <strong>Apache Sedona (v1.7.0)</strong> to merge the NTA boundaries and income data. We will then perform a <strong>spatial join</strong> on the coordinates with the boundaries, determining the pickup and dropoff neighbourhoods.</p>
+<p>By the way, this will be a new file and not the same as the one used in Chapter 2. When working in local mode, I have found that it is more feasible to separate preprocessing into multiple stages. Running too many transformations at once is likely to result in out-of-memory errors and take a very long time to complete.</p>
 </section>
 <section id="installing-and-loading-packages" class="level2" data-number="3.2">
 <h2 data-number="3.2" class="anchored" data-anchor-id="installing-and-loading-packages"><span class="header-section-number">3.2</span> Installing and loading packages</h2>
@@ -255,8 +255,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the Spark directory for temporary files</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>spark_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"spark"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The <strong>configuration</strong> will mostly be kept similar to the one in the first file. The main difference is that some of the <strong>Delta configurations</strong> are explicitly included and not added as a package. This is because <strong>Delta</strong> and <strong>Apache Sedona</strong> clash when Delta is installed as a package while creating the Spark context.</p>
-<p>You will notice a few differences in how the <strong>Spark context</strong> is set up this time around.</p>
+<p>The configuration will mostly be kept similar to the one in the first file. The main difference is that some of the <strong>Delta configurations</strong> are explicitly included and not added as a package. This is because Delta and Apache Sedona clash when Delta is installed as a package when creating the Spark context.</p>
+<p>You will notice a few differences in how the Spark context is set up this time around. Be sure to use this type of setup when working with Apache Sedona and reading or writing to Delta Lake.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create an empty list for Spark configuration settings</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>config <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
@@ -309,7 +309,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="instantiating-spark-context" class="level2" data-number="3.4">
 <h2 data-number="3.4" class="anchored" data-anchor-id="instantiating-spark-context"><span class="header-section-number">3.4</span> Instantiating spark context</h2>
-<p>As you can see, when initiating our Spark context, we explicitly include files associated with <strong>Delta</strong> and <strong>Apache Sedona</strong>. By doing so, <strong>Apache Sedona</strong> and <strong>Delta</strong> do not clash with each other.</p>
+<p>As you can see, when initiating our Spark context, we explicitly include files associated with Delta and Apache Sedona. By doing so, Apache Sedona and Delta packages do not clash with each other.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect to Spark with the defined configuration and additional packages for geospatial processing</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>sc <span class="ot">&lt;-</span> <span class="fu">spark_connect</span>(</span>
@@ -325,8 +325,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="loading-apache-sedona" class="level2" data-number="3.5">
 <h2 data-number="3.5" class="anchored" data-anchor-id="loading-apache-sedona"><span class="header-section-number">3.5</span> Loading Apache Sedona</h2>
-<p>It is only after initializing our Spark context that we can now load the <strong>Apache Sedona</strong> library and initialize its context. I know it seems like a lot, and it is, but this is how we can use both <strong>Apache Sedona</strong> and <strong>Delta</strong> in R, based on my research.</p>
-<p>We are now ready to get started!</p>
+<p>It is only after initializing our Spark context that we can now load the Apache Sedona library and initialize its context. We are now ready to get started!</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(apache.sedona)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">invoke_static</span>(</span>
@@ -339,7 +338,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output cell-output-stdout">
 <pre><code>&lt;jobj[23]&gt;
   org.apache.spark.sql.SparkSession
-  org.apache.spark.sql.SparkSession@3f11159e</code></pre>
+  org.apache.spark.sql.SparkSession@5bb85469</code></pre>
 </div>
 </div>
 <div class="cell">
@@ -351,7 +350,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 data-number="3.6" class="anchored" data-anchor-id="loading-datasets"><span class="header-section-number">3.6</span> Loading datasets</h2>
 <section id="locations-data" class="level3" data-number="3.6.1">
 <h3 data-number="3.6.1" class="anchored" data-anchor-id="locations-data"><span class="header-section-number">3.6.1</span> Locations data</h3>
-<p>We now read our location data, which is thankfully in <strong>Delta</strong> format.</p>
+<p>We now read our location data, which is thankfully in Delta Lake format.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the folder containing location data (latitude and longitude of yellow cabs)</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>locations_sdf_parent_folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"locations_sdf"</span>)</span>
@@ -368,7 +367,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 range</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   table&lt;`sparklyr_tmp_e19c9bd5_a1cd_4cf5_88f7_d21c565962a7`&gt; [?? x 4]
+<pre><code># Source:   table&lt;`sparklyr_tmp_e9d6fb30_b884_4190_84ff_59457673c057`&gt; [?? x 4]
 # Database: spark_connection
     trip_id latitude longitude is_pickup
       &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
@@ -393,7 +392,7 @@ range</code></pre>
 <pre><code>[1] 93889664</code></pre>
 </div>
 </div>
-<p>And is partitioned equally for optimised wide operations, especially joins. Wide operations are those that require data shuffling or exchange between multiple executors such as aggregations and joins. Meanwhile, narrow transformations do not require any exchange of data. Examples of narrow transformations include select and filter.</p>
+<p>And is partitioned equally for optimised wide transformations, especially joins. Wide transformations are those that require data shuffling (exchange) between multiple executors such as aggregations and joins. Meanwhile, narrow transformations do not require any exchange of data. Examples of narrow transformations include select and filter.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>locations_sdf <span class="sc">%&gt;%</span> <span class="fu">sdf_partition_sizes</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -427,7 +426,7 @@ range</code></pre>
 </section>
 <section id="median-household-income-by-neighbourhood-data" class="level3" data-number="3.6.2">
 <h3 data-number="3.6.2" class="anchored" data-anchor-id="median-household-income-by-neighbourhood-data"><span class="header-section-number">3.6.2</span> Median household income by neighbourhood data</h3>
-<p>We now load the <strong>average household income</strong> by neighbourhood in <strong>NYC</strong>.</p>
+<p>We now load the average household income by neighbourhood in NYC.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load income data (household income by NYC neighbourhood)</span></span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>nyc_nta_hh_income_file_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"nyc_nta_med_inc"</span>, <span class="st">"nyc_nta_med_inc.csv"</span>)</span>
@@ -461,7 +460,7 @@ range</code></pre>
 </section>
 <section id="nyc-neighbourhoods-data" class="level3" data-number="3.6.3">
 <h3 data-number="3.6.3" class="anchored" data-anchor-id="nyc-neighbourhoods-data"><span class="header-section-number">3.6.3</span> NYC neighbourhoods data</h3>
-<p>We also load the <strong>shapefile</strong> using <strong>Apache Sedona</strong>. Note that we point Sedona to the entire folder and not just the specific <strong>.shp</strong> file, as is the case when reading shapefiles via <strong>sf</strong>.</p>
+<p>We also load the shapefile using Apache Sedona. Note that we point Sedona to the entire folder and not just the specific .shp file, as is the case when reading shapefiles via sf.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the shapefile for NYC neighbourhoods</span></span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>ny_neighs_pathfile <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"shapefiles"</span>, <span class="st">"nynta2020_25a"</span>)</span>
@@ -502,13 +501,13 @@ $ Shape_Area &lt;chr&gt; "3.53218095620e+07", "2.88543140796e+07", "1.5208960615
 </section>
 <section id="associating-neighbourhood-with-median-household-income" class="level2" data-number="3.7">
 <h2 data-number="3.7" class="anchored" data-anchor-id="associating-neighbourhood-with-median-household-income"><span class="header-section-number">3.7</span> Associating neighbourhood with median household income</h2>
-<p>We now <strong>join</strong> the <strong>income</strong> and <strong>boundaries</strong> data using their common ID.</p>
+<p>We now join the income and boundaries data using their common ID.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Join the neighbourhood shapefile with the income data</span></span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="ot">&lt;-</span> ny_neighbourhoods_shp <span class="sc">%&gt;%</span></span>
 <span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(nyc_nta_hh_income, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"NTA2020"</span> <span class="ot">=</span> <span class="st">"GeoID"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Now, we need to determine the relevant <strong>CRS</strong> that our <strong>boundaries</strong> data uses. If it differs from <strong>EPSG:4324</strong>, we must convert it so that we can match it with the <strong>pickup</strong> and <strong>dropoff</strong> coordinates. I have not found a way to determine the CRS using <strong>Apache Sedona</strong>, so I use <strong>sf</strong> for that.</p>
+<p>Now, we need to determine the relevant <strong>CRS</strong> that our shapefile uses. If it differs from <strong>EPSG:4326</strong>, we must convert it so that we can match it with the pickup and dropoff coordinates. I have not found a way to determine the CRS using Apache Sedona, so I use sf for that.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the shapefile as an SF (Simple Features) object for geospatial operations</span></span>
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>ny_neighs_sf <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="fu">file.path</span>(ny_neighs_pathfile, <span class="st">"nynta2020.shp"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -570,7 +569,7 @@ PROJCRS["NAD83 / New York Long Island (ftUS)",
     ID["EPSG",2263]]</code></pre>
 </div>
 </div>
-<p>Knowing that it is <strong>EPSG:2263</strong>, we can now convert it to <strong>EPSG:4324</strong>.</p>
+<p>Knowing that it is <strong>EPSG:2263</strong>, we can now convert it to <strong>EPSG:4326</strong>.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Reproject the geometries to a different coordinate reference system (CRS) for consistency</span></span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="ot">&lt;-</span> ny_neighbourhoods_shp <span class="sc">%&gt;%</span></span>
@@ -598,7 +597,8 @@ PROJCRS["NAD83 / New York Long Island (ftUS)",
 </section>
 <section id="joining-locations-data-with-neighbourhoods-data" class="level2" data-number="3.8">
 <h2 data-number="3.8" class="anchored" data-anchor-id="joining-locations-data-with-neighbourhoods-data"><span class="header-section-number">3.8</span> Joining locations data with neighbourhoods data</h2>
-<p>Because the <strong>boundaries</strong> data is very small (about 2 MB on disk), we can <strong>cache</strong> it in memory for faster access. Generally, you are encouraged to cache data that is less than <strong>10 MB</strong>. We are also <strong>broadcasting</strong> the neighbourhoods data to improve performance. <strong>Broadcasting</strong> means that our data is shared in its entirety with every core (in local mode) or executor (in cluster mode) so it is not shuffled when joining. Even if we did not explicitly broadcast our data, it most likely would have been broadcasted automatically due to <strong>Adaptive Query Execution</strong> (AQE) since we enabled it at the start using the option <code>config$spark.sql.adaptive.enabled &lt;- "true"</code>. AQE finds the optimal way of conducting joins, and since our neighbourhoods data is minuscule, chances are that it would have been broadcasted to prevent unnecessary shuffling.</p>
+<p>Because the boundaries data is very small (about 2 MB on disk), we can <strong>cache</strong> it in memory for faster access. Generally, you are encouraged to cache data that is less than <strong>10 MB</strong>. We are also <strong>broadcasting</strong> the neighbourhoods data to improve performance. Broadcasting means that our data is shared in its entirety with every executor so it is not shuffled when joining. This reduces data transfer overhead and improves performance.</p>
+<p>Even if we did not explicitly broadcast our data, it most likely would have been broadcasted automatically due to <strong>Adaptive Query Execution</strong> (AQE) since we enabled it at the start using the option <code>config$spark.sql.adaptive.enabled &lt;- "true"</code>. AQE finds the optimal way of conducting joins, and since our neighbourhoods data is minuscule, chances are that it would have been broadcasted to prevent unnecessary shuffling.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Persist the neighbourhood shapefile in memory for faster access</span></span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="ot">&lt;-</span> <span class="fu">sdf_broadcast</span>(ny_neighbourhoods_shp)</span>
@@ -608,14 +608,14 @@ PROJCRS["NAD83 / New York Long Island (ftUS)",
 range</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   table&lt;`sparklyr_tmp_58800bc0_bd7e_463a_aa65_ceba7c2f3725`&gt; [?? x 5]
+<pre><code># Source:   table&lt;`sparklyr_tmp_19d9eb0f_c4b5_42d6_8835_4db9f1ca3c98`&gt; [?? x 5]
 # Database: spark_connection
 # ℹ more rows
 # ℹ 5 more variables: geometry &lt;arrw_bnr&gt;, BoroName &lt;chr&gt;, NTA2020 &lt;chr&gt;,
 #   NTAName &lt;chr&gt;, MdHHIncE &lt;int&gt;</code></pre>
 </div>
 </div>
-<p>I have found that it is best to use <strong>Spatial SQL</strong> when conducting spatial joins or any other spatial analysis using <strong>Apache Sedona</strong> functions. To do this, we first need to register our <strong>dataframes</strong> as temporary <strong>SQL views</strong>. This will be our next step.</p>
+<p>I have found that it is best to use <strong>Spatial SQL</strong> when conducting spatial joins or any other spatial analysis using Apache Sedona functions. To do this, we first need to register our dataframes as temporary <strong>SQL views</strong>. This will be our next step.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Register the dataframes as temporary SQL views for querying</span></span>
 <span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>locations_sdf <span class="sc">%&gt;%</span> <span class="fu">sdf_register</span>(<span class="st">"locations_sdf_view"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -653,7 +653,7 @@ range</code></pre>
 #   NTAName &lt;chr&gt;, MdHHIncE &lt;int&gt;</code></pre>
 </div>
 </div>
-<p>Upon registration, we can now conduct a <strong>spatial join</strong>, asking <strong>Apache Sedona</strong> to find neighbourhoods that contain specific coordinates using the <strong>ST_Contains</strong> function. You can find documentation on all available <strong>Apache Sedona</strong> vector functions <a href="https://sedona.apache.org/docs/latest/sql-functions/">here</a>.</p>
+<p>Upon registration, we can now conduct a spatial join, asking Apache Sedona to find neighbourhoods that contain specific coordinates using the <strong>ST_Contains</strong> function. You can find documentation on all available Apache Sedona vector functions <a href="https://sedona.apache.org/latest/api/sql/Function/">here</a>.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform a spatial join to associate each location (latitude, longitude) with the corresponding neighbourhood</span></span>
 <span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
@@ -669,7 +669,7 @@ range</code></pre>
 </section>
 <section id="writing-data-to-disk" class="level2" data-number="3.9">
 <h2 data-number="3.9" class="anchored" data-anchor-id="writing-data-to-disk"><span class="header-section-number">3.9</span> Writing data to disk</h2>
-<p>Before saving, we remove the <strong>geometry</strong> column, as <strong>Delta</strong> cannot write geometry columns. Moreover, there is no need to keep it in the data, as we don’t plan on mapping all the data just yet. If you need to write big data geometry files, consider using the <strong>GeoParquet</strong> format. You can do so using Spark’s <code>spark_write_geoparquet</code> function or the <code>spark_write_source</code> function with the mode set to <strong>GeoParquet</strong>.</p>
+<p>Before saving our updated data, we remove the geometry column, as Delta Lake does not support geometry columns. Moreover, there is no need to keep it in the data, as we don’t plan on mapping the data just yet. If you need to write big data geometry files, consider using the <strong>GeoParquet</strong> format. You can do so using Spark’s <code>spark_write_geoparquet</code> function or the <code>spark_write_source</code> function with the mode set to “<em>geoparquet</em>”.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove the geometry column from the final dataset for further analysis</span></span>
 <span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_no_geom <span class="ot">&lt;-</span> locations_sdf_updated <span class="sc">%&gt;%</span></span>
@@ -703,22 +703,42 @@ range</code></pre>
 10 40000053  40.7765  -73.9767         0 Manhattan MN0701  Upper West …   158165
 # ℹ more rows</code></pre>
 </div>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_no_geom <span class="sc">%&gt;%</span> <span class="fu">glimpse</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: ??</code></pre>
 </div>
-<p>We now write our data to <strong>Delta</strong> format as usual.</p>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in arrow_collect(object, ...): NAs introduced by coercion to integer
+range</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Columns: 8
+Database: spark_connection
+$ trip_id   &lt;dbl&gt; 40000037, 40000093, 40000016, 40000091, 40000100, 40000031, …
+$ latitude  &lt;dbl&gt; 40.71130, 40.74007, 40.81481, 40.77428, 40.76038, 40.77941, …
+$ longitude &lt;dbl&gt; -74.01067, -73.98603, -73.95528, -73.96144, -73.96136, -73.9…
+$ is_pickup &lt;dbl&gt; 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, …
+$ BoroName  &lt;chr&gt; "Manhattan", "Manhattan", "Manhattan", "Manhattan", "Manhatt…
+$ NTA2020   &lt;chr&gt; "MN0101", "MN0602", "MN0902", "MN0802", "MN0801", "MN0701", …
+$ NTAName   &lt;chr&gt; "Financial District-Battery Park City", "Gramercy", "Manhatt…
+$ MdHHIncE  &lt;int&gt; 195153, 155905, 46367, 194910, 133349, 158165, 133349, 19491…</code></pre>
+</div>
+</div>
+<p>We now write our data to Delta Lake format as usual.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the file path for saving the updated dataset</span></span>
-<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>save_locations_sdf_updated_one_filepath <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"locations_sdf_updated_one"</span>)</span>
-<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the updated dataset to Delta format</span></span>
-<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
-<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>  locations_sdf_updated_no_geom,</span>
-<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> save_locations_sdf_updated_one_filepath</span>
-<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the file path for saving the updated dataset</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>save_locations_sdf_updated_one_filepath <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"locations_sdf_updated_one"</span>)</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the updated dataset to Delta format</span></span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>  locations_sdf_updated_no_geom,</span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> save_locations_sdf_updated_one_filepath</span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And disconnect our spark instance.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from the Spark session once done</span></span>
-<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from the Spark session once done</span></span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 
 
@@ -1177,344 +1197,348 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       </a>
   </div>
 </nav><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
-<div class="sourceCode" id="cb48" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Processing Vector Data with Apache Sedona and Sparklyr in R"</span></span>
-<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> "Using Vector Data to Obtain Median Household Income in Pickup and Droppoff Neighbourhoods"</span></span>
-<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span><span class="co"> </span></span>
-<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a><span class="co">  eval: true</span></span>
-<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a><span class="co">  output: true</span></span>
-<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a><span class="fu">## Introduction</span></span>
-<span id="cb48-10"><a href="#cb48-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-11"><a href="#cb48-11" aria-hidden="true" tabindex="-1"></a>In this part, we are going to use the **saved locations data** to add **pickup** and **dropoff neighbourhoods**. We shall then use the neighbourhoods to obtain the **median incomes** of the pickup and dropoff neighbourhoods. Income is a proxy for **affluence**. Humour me by assuming that there is a relationship between the **duration of a taxi trip** and the affluence of either or both the pickup or dropoff locations.</span>
-<span id="cb48-12"><a href="#cb48-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-13"><a href="#cb48-13" aria-hidden="true" tabindex="-1"></a>We shall introduce two new datasets: **NYC NTA boundaries** based on the 2020 census, and **NTA median income** based on the 2012 ACS. The boundaries data is in **vector format**, while the income data is in **CSV format**. To do this, we shall use **Apache Sedona** to merge the boundaries and income data. We will then perform a **spatial join** on the coordinates with the boundaries, determining the pickup and dropoff neighbourhoods.</span>
-<span id="cb48-14"><a href="#cb48-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-15"><a href="#cb48-15" aria-hidden="true" tabindex="-1"></a>By the way, this will be a **new file** and not the same as the one used for the previous analysis. When working in local mode, I have found that it is more feasible to **separate preprocessing** into multiple steps. Running too many transformations is likely to result in **out-of-memory errors** and take a very long time to complete.</span>
-<span id="cb48-16"><a href="#cb48-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-17"><a href="#cb48-17" aria-hidden="true" tabindex="-1"></a><span class="fu">## Installing and loading packages</span></span>
-<span id="cb48-18"><a href="#cb48-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-21"><a href="#cb48-21" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-22"><a href="#cb48-22" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
-<span id="cb48-23"><a href="#cb48-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-24"><a href="#cb48-24" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"apache.sedona"</span>)</span>
-<span id="cb48-25"><a href="#cb48-25" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-26"><a href="#cb48-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-29"><a href="#cb48-29" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-30"><a href="#cb48-30" aria-hidden="true" tabindex="-1"></a><span class="co">#| output: false</span></span>
-<span id="cb48-31"><a href="#cb48-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-32"><a href="#cb48-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Load necessary libraries for Spark, geospatial data, and data manipulation</span></span>
-<span id="cb48-33"><a href="#cb48-33" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(arrow)</span>
-<span id="cb48-34"><a href="#cb48-34" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sparklyr)</span>
-<span id="cb48-35"><a href="#cb48-35" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span>
-<span id="cb48-36"><a href="#cb48-36" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
-<span id="cb48-37"><a href="#cb48-37" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-38"><a href="#cb48-38" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-41"><a href="#cb48-41" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-42"><a href="#cb48-42" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
-<span id="cb48-43"><a href="#cb48-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-44"><a href="#cb48-44" aria-hidden="true" tabindex="-1"></a><span class="co"># Install Spark version 3.5.5 if not already installed</span></span>
-<span id="cb48-45"><a href="#cb48-45" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_install</span>(<span class="st">"3.5.5"</span>)</span>
-<span id="cb48-46"><a href="#cb48-46" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-47"><a href="#cb48-47" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up Java and Spark environment variables</span></span>
-<span id="cb48-48"><a href="#cb48-48" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"JAVA_HOME"</span><span class="ot">=</span><span class="st">"/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home"</span>)  <span class="co"># Set Java home directory for Spark</span></span>
-<span id="cb48-49"><a href="#cb48-49" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"SPARK_HOME"</span> <span class="ot">=</span> <span class="fu">spark_home_dir</span>(<span class="at">version =</span> <span class="st">"3.5.5"</span>))</span>
-<span id="cb48-50"><a href="#cb48-50" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-51"><a href="#cb48-51" aria-hidden="true" tabindex="-1"></a><span class="co"># Set working directory to the location of your project</span></span>
-<span id="cb48-52"><a href="#cb48-52" aria-hidden="true" tabindex="-1"></a>working_dir <span class="ot">&lt;-</span> <span class="st">"/Users/rodgersiradukunda/Library/CloudStorage/OneDrive-TheUniversityofLiverpool/geospatial_docker"</span></span>
-<span id="cb48-53"><a href="#cb48-53" aria-hidden="true" tabindex="-1"></a><span class="fu">setwd</span>(working_dir)</span>
-<span id="cb48-54"><a href="#cb48-54" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-55"><a href="#cb48-55" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-56"><a href="#cb48-56" aria-hidden="true" tabindex="-1"></a><span class="fu">## Configuring Spark</span></span>
-<span id="cb48-57"><a href="#cb48-57" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-60"><a href="#cb48-60" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-61"><a href="#cb48-61" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the Spark directory for temporary files</span></span>
-<span id="cb48-62"><a href="#cb48-62" aria-hidden="true" tabindex="-1"></a>spark_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"spark"</span>)</span>
-<span id="cb48-63"><a href="#cb48-63" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-64"><a href="#cb48-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-65"><a href="#cb48-65" aria-hidden="true" tabindex="-1"></a>The **configuration** will mostly be kept similar to the one in the first file. The main difference is that some of the **Delta configurations** are explicitly included and not added as a package. This is because **Delta** and **Apache Sedona** clash when Delta is installed as a package while creating the Spark context.</span>
-<span id="cb48-66"><a href="#cb48-66" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-67"><a href="#cb48-67" aria-hidden="true" tabindex="-1"></a>You will notice a few differences in how the **Spark context** is set up this time around.</span>
-<span id="cb48-68"><a href="#cb48-68" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-71"><a href="#cb48-71" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-72"><a href="#cb48-72" aria-hidden="true" tabindex="-1"></a><span class="co"># Create an empty list for Spark configuration settings</span></span>
-<span id="cb48-73"><a href="#cb48-73" aria-hidden="true" tabindex="-1"></a>config <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb48-74"><a href="#cb48-74" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-75"><a href="#cb48-75" aria-hidden="true" tabindex="-1"></a><span class="co"># Set Spark configurations for memory and performance optimisation</span></span>
-<span id="cb48-76"><a href="#cb48-76" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-77"><a href="#cb48-77" aria-hidden="true" tabindex="-1"></a><span class="co"># Configure some delta specific options</span></span>
-<span id="cb48-78"><a href="#cb48-78" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.extensions <span class="ot">&lt;-</span> <span class="st">"io.delta.sql.DeltaSparkSessionExtension"</span></span>
-<span id="cb48-79"><a href="#cb48-79" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.catalog.spark_catalog <span class="ot">&lt;-</span> <span class="st">"org.apache.spark.sql.delta.catalog.DeltaCatalog"</span></span>
-<span id="cb48-80"><a href="#cb48-80" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-81"><a href="#cb48-81" aria-hidden="true" tabindex="-1"></a><span class="co"># Use KryoSerializer for better performance</span></span>
-<span id="cb48-82"><a href="#cb48-82" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.serializer <span class="ot">&lt;-</span> <span class="st">"org.apache.spark.serializer.KryoSerializer"</span>  </span>
-<span id="cb48-83"><a href="#cb48-83" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-84"><a href="#cb48-84" aria-hidden="true" tabindex="-1"></a><span class="co"># Set temporary directory for Spark</span></span>
-<span id="cb48-85"><a href="#cb48-85" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"-Djava.io.tmpdir="</span>, spark_dir)  </span>
-<span id="cb48-86"><a href="#cb48-86" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-87"><a href="#cb48-87" aria-hidden="true" tabindex="-1"></a><span class="co"># Use compressed Oops for JVM performance</span></span>
-<span id="cb48-88"><a href="#cb48-88" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">"-XX:+UseCompressedOops"</span>  </span>
-<span id="cb48-89"><a href="#cb48-89" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-90"><a href="#cb48-90" aria-hidden="true" tabindex="-1"></a><span class="co"># Allocate 8GB of memory for the Spark driver</span></span>
-<span id="cb48-91"><a href="#cb48-91" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-memory</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">'10G'</span>  </span>
-<span id="cb48-92"><a href="#cb48-92" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-93"><a href="#cb48-93" aria-hidden="true" tabindex="-1"></a><span class="co"># Set fraction of heap memory used for Spark storage</span></span>
-<span id="cb48-94"><a href="#cb48-94" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.fraction <span class="ot">&lt;-</span> <span class="fl">0.7</span>  </span>
-<span id="cb48-95"><a href="#cb48-95" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-96"><a href="#cb48-96" aria-hidden="true" tabindex="-1"></a><span class="co"># Set shuffle partitions (local setting based on workload)</span></span>
-<span id="cb48-97"><a href="#cb48-97" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.partitions.local <span class="ot">&lt;-</span> <span class="dv">24</span>  </span>
-<span id="cb48-98"><a href="#cb48-98" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-99"><a href="#cb48-99" aria-hidden="true" tabindex="-1"></a><span class="co"># Set extra memory for driver</span></span>
-<span id="cb48-100"><a href="#cb48-100" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.driver.extraJavaOptions <span class="ot">&lt;-</span> <span class="st">"-Xmx1G"</span>  </span>
-<span id="cb48-101"><a href="#cb48-101" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-102"><a href="#cb48-102" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable off-heap memory usage</span></span>
-<span id="cb48-103"><a href="#cb48-103" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span> </span>
-<span id="cb48-104"><a href="#cb48-104" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-105"><a href="#cb48-105" aria-hidden="true" tabindex="-1"></a><span class="co"># Set 4GB for off-heap memory</span></span>
-<span id="cb48-106"><a href="#cb48-106" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.size <span class="ot">&lt;-</span> <span class="st">"2g"</span>  </span>
-<span id="cb48-107"><a href="#cb48-107" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-108"><a href="#cb48-108" aria-hidden="true" tabindex="-1"></a><span class="co"># Disable shuffle spill to disk</span></span>
-<span id="cb48-109"><a href="#cb48-109" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.spill <span class="ot">&lt;-</span> <span class="st">"false"</span>  </span>
-<span id="cb48-110"><a href="#cb48-110" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-111"><a href="#cb48-111" aria-hidden="true" tabindex="-1"></a><span class="co"># Periodic garbage collection interval</span></span>
-<span id="cb48-112"><a href="#cb48-112" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.cleaner.periodicGC.interval <span class="ot">&lt;-</span> <span class="st">"60s"</span>  </span>
-<span id="cb48-113"><a href="#cb48-113" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-114"><a href="#cb48-114" aria-hidden="true" tabindex="-1"></a><span class="co"># Set max partition size for shuffle files</span></span>
-<span id="cb48-115"><a href="#cb48-115" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.files.maxPartitionBytes <span class="ot">&lt;-</span> <span class="st">"200m"</span>  </span>
-<span id="cb48-116"><a href="#cb48-116" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-117"><a href="#cb48-117" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable adaptive query execution</span></span>
-<span id="cb48-118"><a href="#cb48-118" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.adaptive.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span> </span>
-<span id="cb48-119"><a href="#cb48-119" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-120"><a href="#cb48-120" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-121"><a href="#cb48-121" aria-hidden="true" tabindex="-1"></a><span class="fu">## Instantiating spark context</span></span>
-<span id="cb48-122"><a href="#cb48-122" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-123"><a href="#cb48-123" aria-hidden="true" tabindex="-1"></a>As you can see, when initiating our Spark context, we explicitly include files associated with **Delta** and **Apache Sedona**. By doing so, **Apache Sedona** and **Delta** do not clash with each other.</span>
-<span id="cb48-124"><a href="#cb48-124" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-127"><a href="#cb48-127" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-128"><a href="#cb48-128" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect to Spark with the defined configuration and additional packages for geospatial processing</span></span>
-<span id="cb48-129"><a href="#cb48-129" aria-hidden="true" tabindex="-1"></a>sc <span class="ot">&lt;-</span> <span class="fu">spark_connect</span>(</span>
-<span id="cb48-130"><a href="#cb48-130" aria-hidden="true" tabindex="-1"></a>  <span class="at">master =</span> <span class="st">"local[*]"</span>,</span>
-<span id="cb48-131"><a href="#cb48-131" aria-hidden="true" tabindex="-1"></a>  <span class="at">config =</span> config,</span>
-<span id="cb48-132"><a href="#cb48-132" aria-hidden="true" tabindex="-1"></a>  <span class="at">packages =</span> <span class="fu">c</span>(</span>
-<span id="cb48-133"><a href="#cb48-133" aria-hidden="true" tabindex="-1"></a>    <span class="st">"io.delta:delta-spark_2.12:3.3.0"</span>,</span>
-<span id="cb48-134"><a href="#cb48-134" aria-hidden="true" tabindex="-1"></a>    <span class="st">"org.apache.sedona:sedona-spark-shaded-3.5_2.12:1.7.0"</span>,</span>
-<span id="cb48-135"><a href="#cb48-135" aria-hidden="true" tabindex="-1"></a>    <span class="st">"org.datasyslab:geotools-wrapper:1.7.0-28.5"</span></span>
-<span id="cb48-136"><a href="#cb48-136" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb48-137"><a href="#cb48-137" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb48-138"><a href="#cb48-138" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-139"><a href="#cb48-139" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-140"><a href="#cb48-140" aria-hidden="true" tabindex="-1"></a><span class="fu">## Loading Apache Sedona</span></span>
-<span id="cb48-141"><a href="#cb48-141" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-142"><a href="#cb48-142" aria-hidden="true" tabindex="-1"></a>It is only after initializing our Spark context that we can now load the **Apache Sedona** library and initialize its context. I know it seems like a lot, and it is, but this is how we can use both **Apache Sedona** and **Delta** in R, based on my research.</span>
-<span id="cb48-143"><a href="#cb48-143" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-144"><a href="#cb48-144" aria-hidden="true" tabindex="-1"></a>We are now ready to get started!</span>
-<span id="cb48-145"><a href="#cb48-145" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-148"><a href="#cb48-148" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-149"><a href="#cb48-149" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(apache.sedona)</span>
-<span id="cb48-150"><a href="#cb48-150" aria-hidden="true" tabindex="-1"></a><span class="fu">invoke_static</span>(</span>
-<span id="cb48-151"><a href="#cb48-151" aria-hidden="true" tabindex="-1"></a>  sc,</span>
-<span id="cb48-152"><a href="#cb48-152" aria-hidden="true" tabindex="-1"></a>  <span class="st">"org.apache.sedona.spark.SedonaContext"</span>,</span>
-<span id="cb48-153"><a href="#cb48-153" aria-hidden="true" tabindex="-1"></a>  <span class="st">"create"</span>,</span>
-<span id="cb48-154"><a href="#cb48-154" aria-hidden="true" tabindex="-1"></a>  <span class="fu">spark_session</span>(sc),</span>
-<span id="cb48-155"><a href="#cb48-155" aria-hidden="true" tabindex="-1"></a>  <span class="st">"r"</span></span>
-<span id="cb48-156"><a href="#cb48-156" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb48-157"><a href="#cb48-157" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-158"><a href="#cb48-158" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-161"><a href="#cb48-161" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-162"><a href="#cb48-162" aria-hidden="true" tabindex="-1"></a><span class="co"># Launch Spark web UI to monitor the Spark session</span></span>
-<span id="cb48-163"><a href="#cb48-163" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_web</span>(sc)</span>
-<span id="cb48-164"><a href="#cb48-164" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-165"><a href="#cb48-165" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-166"><a href="#cb48-166" aria-hidden="true" tabindex="-1"></a><span class="fu">## Loading datasets</span></span>
-<span id="cb48-167"><a href="#cb48-167" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-168"><a href="#cb48-168" aria-hidden="true" tabindex="-1"></a><span class="fu">### Locations data</span></span>
-<span id="cb48-169"><a href="#cb48-169" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-170"><a href="#cb48-170" aria-hidden="true" tabindex="-1"></a>We now read our location data, which is thankfully in **Delta** format.</span>
-<span id="cb48-171"><a href="#cb48-171" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-174"><a href="#cb48-174" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-175"><a href="#cb48-175" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the folder containing location data (latitude and longitude of yellow cabs)</span></span>
-<span id="cb48-176"><a href="#cb48-176" aria-hidden="true" tabindex="-1"></a>locations_sdf_parent_folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"locations_sdf"</span>)</span>
-<span id="cb48-177"><a href="#cb48-177" aria-hidden="true" tabindex="-1"></a>locations_sdf <span class="ot">&lt;-</span> <span class="fu">spark_read_delta</span>(</span>
-<span id="cb48-178"><a href="#cb48-178" aria-hidden="true" tabindex="-1"></a>  sc, </span>
-<span id="cb48-179"><a href="#cb48-179" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> locations_sdf_parent_folder, </span>
-<span id="cb48-180"><a href="#cb48-180" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"locations_sdf"</span></span>
-<span id="cb48-181"><a href="#cb48-181" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
-<span id="cb48-182"><a href="#cb48-182" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sdf_repartition</span>(<span class="dv">24</span>)</span>
-<span id="cb48-183"><a href="#cb48-183" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-184"><a href="#cb48-184" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(locations_sdf, <span class="at">width=</span><span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span>
-<span id="cb48-185"><a href="#cb48-185" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-186"><a href="#cb48-186" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-187"><a href="#cb48-187" aria-hidden="true" tabindex="-1"></a>The data contains nearly **94 million rows**!</span>
-<span id="cb48-188"><a href="#cb48-188" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-191"><a href="#cb48-191" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-192"><a href="#cb48-192" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the number of rows in the locations SDF (Spark DataFrame)</span></span>
-<span id="cb48-193"><a href="#cb48-193" aria-hidden="true" tabindex="-1"></a><span class="fu">sdf_nrow</span>(locations_sdf)</span>
-<span id="cb48-194"><a href="#cb48-194" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-195"><a href="#cb48-195" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-196"><a href="#cb48-196" aria-hidden="true" tabindex="-1"></a>And is partitioned equally for optimised wide operations, especially joins. Wide operations are those that require data shuffling or exchange between multiple executors such as aggregations and joins. Meanwhile, narrow transformations do not require any exchange of data. Examples of narrow transformations include select and filter.</span>
-<span id="cb48-197"><a href="#cb48-197" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-200"><a href="#cb48-200" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-201"><a href="#cb48-201" aria-hidden="true" tabindex="-1"></a>locations_sdf <span class="sc">%&gt;%</span> <span class="fu">sdf_partition_sizes</span>()</span>
-<span id="cb48-202"><a href="#cb48-202" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-203"><a href="#cb48-203" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-206"><a href="#cb48-206" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-207"><a href="#cb48-207" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
-<span id="cb48-208"><a href="#cb48-208" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-209"><a href="#cb48-209" aria-hidden="true" tabindex="-1"></a>locations_sdf <span class="ot">&lt;-</span> locations_sdf <span class="sc">%&gt;%</span> </span>
-<span id="cb48-210"><a href="#cb48-210" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(trip_id <span class="sc">&gt;=</span> <span class="dv">40000000</span> <span class="sc">&amp;</span> trip_id <span class="sc">&lt;=</span> <span class="dv">40000100</span>)</span>
-<span id="cb48-211"><a href="#cb48-211" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-212"><a href="#cb48-212" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-213"><a href="#cb48-213" aria-hidden="true" tabindex="-1"></a><span class="fu">### Median household income by neighbourhood data</span></span>
-<span id="cb48-214"><a href="#cb48-214" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-215"><a href="#cb48-215" aria-hidden="true" tabindex="-1"></a>We now load the **average household income** by neighbourhood in **NYC**.</span>
-<span id="cb48-216"><a href="#cb48-216" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-219"><a href="#cb48-219" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-220"><a href="#cb48-220" aria-hidden="true" tabindex="-1"></a><span class="co"># Load income data (household income by NYC neighbourhood)</span></span>
-<span id="cb48-221"><a href="#cb48-221" aria-hidden="true" tabindex="-1"></a>nyc_nta_hh_income_file_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"nyc_nta_med_inc"</span>, <span class="st">"nyc_nta_med_inc.csv"</span>)</span>
-<span id="cb48-222"><a href="#cb48-222" aria-hidden="true" tabindex="-1"></a>nyc_nta_hh_income <span class="ot">&lt;-</span> <span class="fu">spark_read_csv</span>(sc, <span class="at">path =</span> nyc_nta_hh_income_file_path, <span class="at">name =</span> <span class="st">"nyc_nta_hh_income"</span>)</span>
-<span id="cb48-223"><a href="#cb48-223" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-224"><a href="#cb48-224" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-227"><a href="#cb48-227" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-228"><a href="#cb48-228" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the income data</span></span>
-<span id="cb48-229"><a href="#cb48-229" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(nyc_nta_hh_income, <span class="at">width =</span> <span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span>
-<span id="cb48-230"><a href="#cb48-230" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-231"><a href="#cb48-231" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-232"><a href="#cb48-232" aria-hidden="true" tabindex="-1"></a><span class="fu">### NYC neighbourhoods data</span></span>
-<span id="cb48-233"><a href="#cb48-233" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-234"><a href="#cb48-234" aria-hidden="true" tabindex="-1"></a>We also load the **shapefile** using **Apache Sedona**. Note that we point Sedona to the entire folder and not just the specific **.shp** file, as is the case when reading shapefiles via **sf**.</span>
-<span id="cb48-235"><a href="#cb48-235" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-238"><a href="#cb48-238" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-239"><a href="#cb48-239" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the shapefile for NYC neighbourhoods</span></span>
-<span id="cb48-240"><a href="#cb48-240" aria-hidden="true" tabindex="-1"></a>ny_neighs_pathfile <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"shapefiles"</span>, <span class="st">"nynta2020_25a"</span>)</span>
-<span id="cb48-241"><a href="#cb48-241" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="ot">&lt;-</span> <span class="fu">spark_read_shapefile</span>(sc, <span class="at">path =</span> ny_neighs_pathfile, <span class="at">name =</span> <span class="st">"ny_neighbourhoods_shp"</span>)</span>
-<span id="cb48-242"><a href="#cb48-242" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-243"><a href="#cb48-243" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-246"><a href="#cb48-246" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-247"><a href="#cb48-247" aria-hidden="true" tabindex="-1"></a><span class="co"># Display a quick summary of the shapefile data</span></span>
-<span id="cb48-248"><a href="#cb48-248" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="sc">%&gt;%</span> <span class="fu">glimpse</span>()</span>
-<span id="cb48-249"><a href="#cb48-249" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-250"><a href="#cb48-250" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-251"><a href="#cb48-251" aria-hidden="true" tabindex="-1"></a><span class="fu">## Associating neighbourhood with median household income</span></span>
-<span id="cb48-252"><a href="#cb48-252" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-253"><a href="#cb48-253" aria-hidden="true" tabindex="-1"></a>We now **join** the **income** and **boundaries** data using their common ID.</span>
-<span id="cb48-254"><a href="#cb48-254" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-257"><a href="#cb48-257" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-258"><a href="#cb48-258" aria-hidden="true" tabindex="-1"></a><span class="co"># Join the neighbourhood shapefile with the income data</span></span>
-<span id="cb48-259"><a href="#cb48-259" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="ot">&lt;-</span> ny_neighbourhoods_shp <span class="sc">%&gt;%</span></span>
-<span id="cb48-260"><a href="#cb48-260" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(nyc_nta_hh_income, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"NTA2020"</span> <span class="ot">=</span> <span class="st">"GeoID"</span>))</span>
-<span id="cb48-261"><a href="#cb48-261" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-262"><a href="#cb48-262" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-263"><a href="#cb48-263" aria-hidden="true" tabindex="-1"></a>Now, we need to determine the relevant **CRS** that our **boundaries** data uses. If it differs from **EPSG:4324**, we must convert it so that we can match it with the **pickup** and **dropoff** coordinates. I have not found a way to determine the CRS using **Apache Sedona**, so I use **sf** for that.</span>
-<span id="cb48-264"><a href="#cb48-264" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-267"><a href="#cb48-267" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-268"><a href="#cb48-268" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the shapefile as an SF (Simple Features) object for geospatial operations</span></span>
-<span id="cb48-269"><a href="#cb48-269" aria-hidden="true" tabindex="-1"></a>ny_neighs_sf <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="fu">file.path</span>(ny_neighs_pathfile, <span class="st">"nynta2020.shp"</span>))</span>
-<span id="cb48-270"><a href="#cb48-270" aria-hidden="true" tabindex="-1"></a><span class="fu">st_crs</span>(ny_neighs_sf)</span>
-<span id="cb48-271"><a href="#cb48-271" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-272"><a href="#cb48-272" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-273"><a href="#cb48-273" aria-hidden="true" tabindex="-1"></a>Knowing that it is **EPSG:2263**, we can now convert it to **EPSG:4324**.</span>
-<span id="cb48-274"><a href="#cb48-274" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-277"><a href="#cb48-277" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-278"><a href="#cb48-278" aria-hidden="true" tabindex="-1"></a><span class="co"># Reproject the geometries to a different coordinate reference system (CRS) for consistency</span></span>
-<span id="cb48-279"><a href="#cb48-279" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="ot">&lt;-</span> ny_neighbourhoods_shp <span class="sc">%&gt;%</span></span>
-<span id="cb48-280"><a href="#cb48-280" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb48-281"><a href="#cb48-281" aria-hidden="true" tabindex="-1"></a>    <span class="at">geometry =</span> <span class="fu">st_transform</span>(</span>
-<span id="cb48-282"><a href="#cb48-282" aria-hidden="true" tabindex="-1"></a>      geometry,</span>
-<span id="cb48-283"><a href="#cb48-283" aria-hidden="true" tabindex="-1"></a>      <span class="st">"epsg:2263"</span>,  <span class="co"># Source CRS</span></span>
-<span id="cb48-284"><a href="#cb48-284" aria-hidden="true" tabindex="-1"></a>      <span class="st">"epsg:4326"</span>,  <span class="co"># Target CRS</span></span>
-<span id="cb48-285"><a href="#cb48-285" aria-hidden="true" tabindex="-1"></a>      F</span>
-<span id="cb48-286"><a href="#cb48-286" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb48-287"><a href="#cb48-287" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb48-288"><a href="#cb48-288" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
-<span id="cb48-289"><a href="#cb48-289" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span><span class="fu">c</span>(</span>
-<span id="cb48-290"><a href="#cb48-290" aria-hidden="true" tabindex="-1"></a>      BoroCode,</span>
-<span id="cb48-291"><a href="#cb48-291" aria-hidden="true" tabindex="-1"></a>      CountyFIPS,</span>
-<span id="cb48-292"><a href="#cb48-292" aria-hidden="true" tabindex="-1"></a>      NTAAbbrev,</span>
-<span id="cb48-293"><a href="#cb48-293" aria-hidden="true" tabindex="-1"></a>      NTAType,</span>
-<span id="cb48-294"><a href="#cb48-294" aria-hidden="true" tabindex="-1"></a>      CDTA2020,</span>
-<span id="cb48-295"><a href="#cb48-295" aria-hidden="true" tabindex="-1"></a>      CDTAName,</span>
-<span id="cb48-296"><a href="#cb48-296" aria-hidden="true" tabindex="-1"></a>      Shape_Leng,</span>
-<span id="cb48-297"><a href="#cb48-297" aria-hidden="true" tabindex="-1"></a>      Shape_Area</span>
-<span id="cb48-298"><a href="#cb48-298" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb48-299"><a href="#cb48-299" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb48-300"><a href="#cb48-300" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-301"><a href="#cb48-301" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-302"><a href="#cb48-302" aria-hidden="true" tabindex="-1"></a><span class="fu">## Joining locations data with neighbourhoods data</span></span>
-<span id="cb48-303"><a href="#cb48-303" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-304"><a href="#cb48-304" aria-hidden="true" tabindex="-1"></a>Because the **boundaries** data is very small (about 2 MB on disk), we can **cache** it in memory for faster access. Generally, you are encouraged to cache data that is less than **10 MB**. We are also **broadcasting** the neighbourhoods data to improve performance. **Broadcasting** means that our data is shared in its entirety with every core (in local mode) or executor (in cluster mode) so it is not shuffled when joining. Even if we did not explicitly broadcast our data, it most likely would have been broadcasted automatically due to **Adaptive Query Execution** (AQE) since we enabled it at the start using the option <span class="in">`config$spark.sql.adaptive.enabled &lt;- "true"`</span>. AQE finds the optimal way of conducting joins, and since our neighbourhoods data is minuscule, chances are that it would have been broadcasted to prevent unnecessary shuffling.</span>
-<span id="cb48-305"><a href="#cb48-305" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-308"><a href="#cb48-308" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-309"><a href="#cb48-309" aria-hidden="true" tabindex="-1"></a><span class="co"># Persist the neighbourhood shapefile in memory for faster access</span></span>
-<span id="cb48-310"><a href="#cb48-310" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="ot">&lt;-</span> <span class="fu">sdf_broadcast</span>(ny_neighbourhoods_shp)</span>
-<span id="cb48-311"><a href="#cb48-311" aria-hidden="true" tabindex="-1"></a><span class="fu">sdf_persist</span>(ny_neighbourhoods_shp, <span class="at">storage.level =</span> <span class="st">"MEMORY_ONLY"</span>)</span>
-<span id="cb48-312"><a href="#cb48-312" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-313"><a href="#cb48-313" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-314"><a href="#cb48-314" aria-hidden="true" tabindex="-1"></a>I have found that it is best to use **Spatial SQL** when conducting spatial joins or any other spatial analysis using **Apache Sedona** functions. To do this, we first need to register our **dataframes** as temporary **SQL views**. This will be our next step.</span>
-<span id="cb48-315"><a href="#cb48-315" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-318"><a href="#cb48-318" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-319"><a href="#cb48-319" aria-hidden="true" tabindex="-1"></a><span class="co"># Register the dataframes as temporary SQL views for querying</span></span>
-<span id="cb48-320"><a href="#cb48-320" aria-hidden="true" tabindex="-1"></a>locations_sdf <span class="sc">%&gt;%</span> <span class="fu">sdf_register</span>(<span class="st">"locations_sdf_view"</span>)</span>
-<span id="cb48-321"><a href="#cb48-321" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="sc">%&gt;%</span> <span class="fu">sdf_register</span>(<span class="st">"ny_neighbourhoods_shp_view"</span>)</span>
-<span id="cb48-322"><a href="#cb48-322" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-323"><a href="#cb48-323" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-324"><a href="#cb48-324" aria-hidden="true" tabindex="-1"></a>Upon registration, we can now conduct a **spatial join**, asking **Apache Sedona** to find neighbourhoods that contain specific coordinates using the **ST_Contains** function. You can find documentation on all available **Apache Sedona** vector functions <span class="co">[</span><span class="ot">here</span><span class="co">](https://sedona.apache.org/docs/latest/sql-functions/)</span>.</span>
-<span id="cb48-325"><a href="#cb48-325" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-328"><a href="#cb48-328" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-329"><a href="#cb48-329" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform a spatial join to associate each location (latitude, longitude) with the corresponding neighbourhood</span></span>
-<span id="cb48-330"><a href="#cb48-330" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
-<span id="cb48-331"><a href="#cb48-331" aria-hidden="true" tabindex="-1"></a>  sc,</span>
-<span id="cb48-332"><a href="#cb48-332" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
-<span id="cb48-333"><a href="#cb48-333" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT /*+ BROADCAST(b) */ a.*, b.*</span></span>
-<span id="cb48-334"><a href="#cb48-334" aria-hidden="true" tabindex="-1"></a><span class="st">  FROM locations_sdf_view a</span></span>
-<span id="cb48-335"><a href="#cb48-335" aria-hidden="true" tabindex="-1"></a><span class="st">  LEFT JOIN ny_neighbourhoods_shp_view b</span></span>
-<span id="cb48-336"><a href="#cb48-336" aria-hidden="true" tabindex="-1"></a><span class="st">    ON ST_Contains(b.geometry, ST_Point(a.longitude, a.latitude))</span></span>
-<span id="cb48-337"><a href="#cb48-337" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
-<span id="cb48-338"><a href="#cb48-338" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb48-339"><a href="#cb48-339" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-340"><a href="#cb48-340" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-341"><a href="#cb48-341" aria-hidden="true" tabindex="-1"></a><span class="fu">## Writing data to disk</span></span>
-<span id="cb48-342"><a href="#cb48-342" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-343"><a href="#cb48-343" aria-hidden="true" tabindex="-1"></a>Before saving, we remove the **geometry** column, as **Delta** cannot write geometry columns. Moreover, there is no need to keep it in the data, as we don't plan on mapping all the data just yet. If you need to write big data geometry files, consider using the **GeoParquet** format. You can do so using Spark's `spark_write_geoparquet` function or the `spark_write_source` function with the mode set to **GeoParquet**.</span>
-<span id="cb48-344"><a href="#cb48-344" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-347"><a href="#cb48-347" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-348"><a href="#cb48-348" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove the geometry column from the final dataset for further analysis</span></span>
-<span id="cb48-349"><a href="#cb48-349" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_no_geom <span class="ot">&lt;-</span> locations_sdf_updated <span class="sc">%&gt;%</span></span>
-<span id="cb48-350"><a href="#cb48-350" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(geometry))</span>
-<span id="cb48-351"><a href="#cb48-351" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-352"><a href="#cb48-352" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-353"><a href="#cb48-353" aria-hidden="true" tabindex="-1"></a>Our final data is as shown below. Not too bad for the few lines of code written.</span>
-<span id="cb48-354"><a href="#cb48-354" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-357"><a href="#cb48-357" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-358"><a href="#cb48-358" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the updated data with all relevant fields (no geometry)</span></span>
-<span id="cb48-359"><a href="#cb48-359" aria-hidden="true" tabindex="-1"></a>withr<span class="sc">::</span><span class="fu">with_options</span>(</span>
-<span id="cb48-360"><a href="#cb48-360" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">pillar.sigfig =</span> <span class="dv">6</span>),</span>
-<span id="cb48-361"><a href="#cb48-361" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(locations_sdf_updated_no_geom, <span class="at">n=</span><span class="dv">10</span>)</span>
-<span id="cb48-362"><a href="#cb48-362" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb48-363"><a href="#cb48-363" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-364"><a href="#cb48-364" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-365"><a href="#cb48-365" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-366"><a href="#cb48-366" aria-hidden="true" tabindex="-1"></a>We now write our data to **Delta** format as usual.</span>
-<span id="cb48-367"><a href="#cb48-367" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-370"><a href="#cb48-370" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-371"><a href="#cb48-371" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
-<span id="cb48-372"><a href="#cb48-372" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-373"><a href="#cb48-373" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the file path for saving the updated dataset</span></span>
-<span id="cb48-374"><a href="#cb48-374" aria-hidden="true" tabindex="-1"></a>save_locations_sdf_updated_one_filepath <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"locations_sdf_updated_one"</span>)</span>
-<span id="cb48-375"><a href="#cb48-375" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-376"><a href="#cb48-376" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the updated dataset to Delta format</span></span>
-<span id="cb48-377"><a href="#cb48-377" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
-<span id="cb48-378"><a href="#cb48-378" aria-hidden="true" tabindex="-1"></a>  locations_sdf_updated_no_geom,</span>
-<span id="cb48-379"><a href="#cb48-379" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> save_locations_sdf_updated_one_filepath</span>
-<span id="cb48-380"><a href="#cb48-380" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb48-381"><a href="#cb48-381" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb48-382"><a href="#cb48-382" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-383"><a href="#cb48-383" aria-hidden="true" tabindex="-1"></a>And disconnect our spark instance.</span>
-<span id="cb48-384"><a href="#cb48-384" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb48-387"><a href="#cb48-387" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb48-388"><a href="#cb48-388" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from the Spark session once done</span></span>
-<span id="cb48-389"><a href="#cb48-389" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span>
-<span id="cb48-390"><a href="#cb48-390" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<div class="sourceCode" id="cb52" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Processing Vector Data with Apache Sedona and Sparklyr in R"</span></span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> "Using Vector Data to Obtain Median Household Income in Pickup and Droppoff Neighbourhoods"</span></span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span><span class="co"> </span></span>
+<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a><span class="co">  eval: true</span></span>
+<span id="cb52-6"><a href="#cb52-6" aria-hidden="true" tabindex="-1"></a><span class="co">  output: true</span></span>
+<span id="cb52-7"><a href="#cb52-7" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb52-8"><a href="#cb52-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-9"><a href="#cb52-9" aria-hidden="true" tabindex="-1"></a><span class="fu">## Introduction</span></span>
+<span id="cb52-10"><a href="#cb52-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-11"><a href="#cb52-11" aria-hidden="true" tabindex="-1"></a>In this part, we are going to use the saved locations data to determine the **pickup** and **dropoff neighbourhoods** associated with each trip. We shall then use these additional data to obtain the **median household incomes** of the pickup and dropoff neighbourhoods. We use income as a proxy for **affluence**. Humour me by assuming that there is a relationship between the duration of a taxi trip and the affluence of either or both the pickup or dropoff locations.</span>
+<span id="cb52-12"><a href="#cb52-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-13"><a href="#cb52-13" aria-hidden="true" tabindex="-1"></a>We shall introduce two new datasets: **NYC Neighbourhood Tabulation Areas (NTAs) boundaries** based on the [2020 census](https://s-media.nyc.gov/agencies/dcp/assets/files/zip/data-tools/bytes/nynta2020_25a.zip), and **NTA household median income** based on the [2022 American Community Survey (ACS)](https://s-media.nyc.gov/agencies/dcp/assets/files/excel/data-tools/census/acs/Econ_1822_NTA.xlsx). The boundaries data is in **vector format**, while the income data is in **CSV format** (originally .xlsx but filtered for GeoID and MdHHIncE columns, then saved as CSV). To do this, we shall use **Apache Sedona (v1.7.0)** to merge the NTA boundaries and income data. We will then perform a **spatial join** on the coordinates with the boundaries, determining the pickup and dropoff neighbourhoods.</span>
+<span id="cb52-14"><a href="#cb52-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-15"><a href="#cb52-15" aria-hidden="true" tabindex="-1"></a>By the way, this will be a new file and not the same as the one used in Chapter 2. When working in local mode, I have found that it is more feasible to separate preprocessing into multiple stages. Running too many transformations at once is likely to result in out-of-memory errors and take a very long time to complete.</span>
+<span id="cb52-16"><a href="#cb52-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-17"><a href="#cb52-17" aria-hidden="true" tabindex="-1"></a><span class="fu">## Installing and loading packages</span></span>
+<span id="cb52-18"><a href="#cb52-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-21"><a href="#cb52-21" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-22"><a href="#cb52-22" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb52-23"><a href="#cb52-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-24"><a href="#cb52-24" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"apache.sedona"</span>)</span>
+<span id="cb52-25"><a href="#cb52-25" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-26"><a href="#cb52-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-29"><a href="#cb52-29" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-30"><a href="#cb52-30" aria-hidden="true" tabindex="-1"></a><span class="co">#| output: false</span></span>
+<span id="cb52-31"><a href="#cb52-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-32"><a href="#cb52-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Load necessary libraries for Spark, geospatial data, and data manipulation</span></span>
+<span id="cb52-33"><a href="#cb52-33" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(arrow)</span>
+<span id="cb52-34"><a href="#cb52-34" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sparklyr)</span>
+<span id="cb52-35"><a href="#cb52-35" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span>
+<span id="cb52-36"><a href="#cb52-36" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb52-37"><a href="#cb52-37" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-38"><a href="#cb52-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-41"><a href="#cb52-41" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-42"><a href="#cb52-42" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
+<span id="cb52-43"><a href="#cb52-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-44"><a href="#cb52-44" aria-hidden="true" tabindex="-1"></a><span class="co"># Install Spark version 3.5.5 if not already installed</span></span>
+<span id="cb52-45"><a href="#cb52-45" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_install</span>(<span class="st">"3.5.5"</span>)</span>
+<span id="cb52-46"><a href="#cb52-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-47"><a href="#cb52-47" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up Java and Spark environment variables</span></span>
+<span id="cb52-48"><a href="#cb52-48" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"JAVA_HOME"</span><span class="ot">=</span><span class="st">"/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home"</span>)  <span class="co"># Set Java home directory for Spark</span></span>
+<span id="cb52-49"><a href="#cb52-49" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"SPARK_HOME"</span> <span class="ot">=</span> <span class="fu">spark_home_dir</span>(<span class="at">version =</span> <span class="st">"3.5.5"</span>))</span>
+<span id="cb52-50"><a href="#cb52-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-51"><a href="#cb52-51" aria-hidden="true" tabindex="-1"></a><span class="co"># Set working directory to the location of your project</span></span>
+<span id="cb52-52"><a href="#cb52-52" aria-hidden="true" tabindex="-1"></a>working_dir <span class="ot">&lt;-</span> <span class="st">"/Users/rodgersiradukunda/Library/CloudStorage/OneDrive-TheUniversityofLiverpool/geospatial_docker"</span></span>
+<span id="cb52-53"><a href="#cb52-53" aria-hidden="true" tabindex="-1"></a><span class="fu">setwd</span>(working_dir)</span>
+<span id="cb52-54"><a href="#cb52-54" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-55"><a href="#cb52-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-56"><a href="#cb52-56" aria-hidden="true" tabindex="-1"></a><span class="fu">## Configuring Spark</span></span>
+<span id="cb52-57"><a href="#cb52-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-60"><a href="#cb52-60" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-61"><a href="#cb52-61" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the Spark directory for temporary files</span></span>
+<span id="cb52-62"><a href="#cb52-62" aria-hidden="true" tabindex="-1"></a>spark_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"spark"</span>)</span>
+<span id="cb52-63"><a href="#cb52-63" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-64"><a href="#cb52-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-65"><a href="#cb52-65" aria-hidden="true" tabindex="-1"></a>The configuration will mostly be kept similar to the one in the first file. The main difference is that some of the **Delta configurations** are explicitly included and not added as a package. This is because Delta and Apache Sedona clash when Delta is installed as a package when creating the Spark context.</span>
+<span id="cb52-66"><a href="#cb52-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-67"><a href="#cb52-67" aria-hidden="true" tabindex="-1"></a>You will notice a few differences in how the Spark context is set up this time around. Be sure to use this type of setup when working with Apache Sedona and reading or writing to Delta Lake.</span>
+<span id="cb52-68"><a href="#cb52-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-71"><a href="#cb52-71" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-72"><a href="#cb52-72" aria-hidden="true" tabindex="-1"></a><span class="co"># Create an empty list for Spark configuration settings</span></span>
+<span id="cb52-73"><a href="#cb52-73" aria-hidden="true" tabindex="-1"></a>config <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb52-74"><a href="#cb52-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-75"><a href="#cb52-75" aria-hidden="true" tabindex="-1"></a><span class="co"># Set Spark configurations for memory and performance optimisation</span></span>
+<span id="cb52-76"><a href="#cb52-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-77"><a href="#cb52-77" aria-hidden="true" tabindex="-1"></a><span class="co"># Configure some delta specific options</span></span>
+<span id="cb52-78"><a href="#cb52-78" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.extensions <span class="ot">&lt;-</span> <span class="st">"io.delta.sql.DeltaSparkSessionExtension"</span></span>
+<span id="cb52-79"><a href="#cb52-79" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.catalog.spark_catalog <span class="ot">&lt;-</span> <span class="st">"org.apache.spark.sql.delta.catalog.DeltaCatalog"</span></span>
+<span id="cb52-80"><a href="#cb52-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-81"><a href="#cb52-81" aria-hidden="true" tabindex="-1"></a><span class="co"># Use KryoSerializer for better performance</span></span>
+<span id="cb52-82"><a href="#cb52-82" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.serializer <span class="ot">&lt;-</span> <span class="st">"org.apache.spark.serializer.KryoSerializer"</span>  </span>
+<span id="cb52-83"><a href="#cb52-83" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-84"><a href="#cb52-84" aria-hidden="true" tabindex="-1"></a><span class="co"># Set temporary directory for Spark</span></span>
+<span id="cb52-85"><a href="#cb52-85" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"-Djava.io.tmpdir="</span>, spark_dir)  </span>
+<span id="cb52-86"><a href="#cb52-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-87"><a href="#cb52-87" aria-hidden="true" tabindex="-1"></a><span class="co"># Use compressed Oops for JVM performance</span></span>
+<span id="cb52-88"><a href="#cb52-88" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">"-XX:+UseCompressedOops"</span>  </span>
+<span id="cb52-89"><a href="#cb52-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-90"><a href="#cb52-90" aria-hidden="true" tabindex="-1"></a><span class="co"># Allocate 8GB of memory for the Spark driver</span></span>
+<span id="cb52-91"><a href="#cb52-91" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-memory</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">'10G'</span>  </span>
+<span id="cb52-92"><a href="#cb52-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-93"><a href="#cb52-93" aria-hidden="true" tabindex="-1"></a><span class="co"># Set fraction of heap memory used for Spark storage</span></span>
+<span id="cb52-94"><a href="#cb52-94" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.fraction <span class="ot">&lt;-</span> <span class="fl">0.7</span>  </span>
+<span id="cb52-95"><a href="#cb52-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-96"><a href="#cb52-96" aria-hidden="true" tabindex="-1"></a><span class="co"># Set shuffle partitions (local setting based on workload)</span></span>
+<span id="cb52-97"><a href="#cb52-97" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.partitions.local <span class="ot">&lt;-</span> <span class="dv">24</span>  </span>
+<span id="cb52-98"><a href="#cb52-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-99"><a href="#cb52-99" aria-hidden="true" tabindex="-1"></a><span class="co"># Set extra memory for driver</span></span>
+<span id="cb52-100"><a href="#cb52-100" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.driver.extraJavaOptions <span class="ot">&lt;-</span> <span class="st">"-Xmx1G"</span>  </span>
+<span id="cb52-101"><a href="#cb52-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-102"><a href="#cb52-102" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable off-heap memory usage</span></span>
+<span id="cb52-103"><a href="#cb52-103" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span> </span>
+<span id="cb52-104"><a href="#cb52-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-105"><a href="#cb52-105" aria-hidden="true" tabindex="-1"></a><span class="co"># Set 4GB for off-heap memory</span></span>
+<span id="cb52-106"><a href="#cb52-106" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.size <span class="ot">&lt;-</span> <span class="st">"2g"</span>  </span>
+<span id="cb52-107"><a href="#cb52-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-108"><a href="#cb52-108" aria-hidden="true" tabindex="-1"></a><span class="co"># Disable shuffle spill to disk</span></span>
+<span id="cb52-109"><a href="#cb52-109" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.spill <span class="ot">&lt;-</span> <span class="st">"false"</span>  </span>
+<span id="cb52-110"><a href="#cb52-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-111"><a href="#cb52-111" aria-hidden="true" tabindex="-1"></a><span class="co"># Periodic garbage collection interval</span></span>
+<span id="cb52-112"><a href="#cb52-112" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.cleaner.periodicGC.interval <span class="ot">&lt;-</span> <span class="st">"60s"</span>  </span>
+<span id="cb52-113"><a href="#cb52-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-114"><a href="#cb52-114" aria-hidden="true" tabindex="-1"></a><span class="co"># Set max partition size for shuffle files</span></span>
+<span id="cb52-115"><a href="#cb52-115" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.files.maxPartitionBytes <span class="ot">&lt;-</span> <span class="st">"200m"</span>  </span>
+<span id="cb52-116"><a href="#cb52-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-117"><a href="#cb52-117" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable adaptive query execution</span></span>
+<span id="cb52-118"><a href="#cb52-118" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.adaptive.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span> </span>
+<span id="cb52-119"><a href="#cb52-119" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-120"><a href="#cb52-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-121"><a href="#cb52-121" aria-hidden="true" tabindex="-1"></a><span class="fu">## Instantiating spark context</span></span>
+<span id="cb52-122"><a href="#cb52-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-123"><a href="#cb52-123" aria-hidden="true" tabindex="-1"></a>As you can see, when initiating our Spark context, we explicitly include files associated with Delta and Apache Sedona. By doing so, Apache Sedona and Delta packages do not clash with each other.</span>
+<span id="cb52-124"><a href="#cb52-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-127"><a href="#cb52-127" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-128"><a href="#cb52-128" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect to Spark with the defined configuration and additional packages for geospatial processing</span></span>
+<span id="cb52-129"><a href="#cb52-129" aria-hidden="true" tabindex="-1"></a>sc <span class="ot">&lt;-</span> <span class="fu">spark_connect</span>(</span>
+<span id="cb52-130"><a href="#cb52-130" aria-hidden="true" tabindex="-1"></a>  <span class="at">master =</span> <span class="st">"local[*]"</span>,</span>
+<span id="cb52-131"><a href="#cb52-131" aria-hidden="true" tabindex="-1"></a>  <span class="at">config =</span> config,</span>
+<span id="cb52-132"><a href="#cb52-132" aria-hidden="true" tabindex="-1"></a>  <span class="at">packages =</span> <span class="fu">c</span>(</span>
+<span id="cb52-133"><a href="#cb52-133" aria-hidden="true" tabindex="-1"></a>    <span class="st">"io.delta:delta-spark_2.12:3.3.0"</span>,</span>
+<span id="cb52-134"><a href="#cb52-134" aria-hidden="true" tabindex="-1"></a>    <span class="st">"org.apache.sedona:sedona-spark-shaded-3.5_2.12:1.7.0"</span>,</span>
+<span id="cb52-135"><a href="#cb52-135" aria-hidden="true" tabindex="-1"></a>    <span class="st">"org.datasyslab:geotools-wrapper:1.7.0-28.5"</span></span>
+<span id="cb52-136"><a href="#cb52-136" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb52-137"><a href="#cb52-137" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb52-138"><a href="#cb52-138" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-139"><a href="#cb52-139" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-140"><a href="#cb52-140" aria-hidden="true" tabindex="-1"></a><span class="fu">## Loading Apache Sedona</span></span>
+<span id="cb52-141"><a href="#cb52-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-142"><a href="#cb52-142" aria-hidden="true" tabindex="-1"></a>It is only after initializing our Spark context that we can now load the Apache Sedona library and initialize its context. We are now ready to get started!</span>
+<span id="cb52-143"><a href="#cb52-143" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-146"><a href="#cb52-146" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-147"><a href="#cb52-147" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(apache.sedona)</span>
+<span id="cb52-148"><a href="#cb52-148" aria-hidden="true" tabindex="-1"></a><span class="fu">invoke_static</span>(</span>
+<span id="cb52-149"><a href="#cb52-149" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb52-150"><a href="#cb52-150" aria-hidden="true" tabindex="-1"></a>  <span class="st">"org.apache.sedona.spark.SedonaContext"</span>,</span>
+<span id="cb52-151"><a href="#cb52-151" aria-hidden="true" tabindex="-1"></a>  <span class="st">"create"</span>,</span>
+<span id="cb52-152"><a href="#cb52-152" aria-hidden="true" tabindex="-1"></a>  <span class="fu">spark_session</span>(sc),</span>
+<span id="cb52-153"><a href="#cb52-153" aria-hidden="true" tabindex="-1"></a>  <span class="st">"r"</span></span>
+<span id="cb52-154"><a href="#cb52-154" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb52-155"><a href="#cb52-155" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-156"><a href="#cb52-156" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-159"><a href="#cb52-159" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-160"><a href="#cb52-160" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb52-161"><a href="#cb52-161" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-162"><a href="#cb52-162" aria-hidden="true" tabindex="-1"></a><span class="co"># Launch Spark web UI to monitor the Spark session</span></span>
+<span id="cb52-163"><a href="#cb52-163" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_web</span>(sc)</span>
+<span id="cb52-164"><a href="#cb52-164" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-165"><a href="#cb52-165" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-166"><a href="#cb52-166" aria-hidden="true" tabindex="-1"></a><span class="fu">## Loading datasets</span></span>
+<span id="cb52-167"><a href="#cb52-167" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-168"><a href="#cb52-168" aria-hidden="true" tabindex="-1"></a><span class="fu">### Locations data</span></span>
+<span id="cb52-169"><a href="#cb52-169" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-170"><a href="#cb52-170" aria-hidden="true" tabindex="-1"></a>We now read our location data, which is thankfully in Delta Lake format.</span>
+<span id="cb52-171"><a href="#cb52-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-174"><a href="#cb52-174" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-175"><a href="#cb52-175" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the folder containing location data (latitude and longitude of yellow cabs)</span></span>
+<span id="cb52-176"><a href="#cb52-176" aria-hidden="true" tabindex="-1"></a>locations_sdf_parent_folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"locations_sdf"</span>)</span>
+<span id="cb52-177"><a href="#cb52-177" aria-hidden="true" tabindex="-1"></a>locations_sdf <span class="ot">&lt;-</span> <span class="fu">spark_read_delta</span>(</span>
+<span id="cb52-178"><a href="#cb52-178" aria-hidden="true" tabindex="-1"></a>  sc, </span>
+<span id="cb52-179"><a href="#cb52-179" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> locations_sdf_parent_folder, </span>
+<span id="cb52-180"><a href="#cb52-180" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"locations_sdf"</span></span>
+<span id="cb52-181"><a href="#cb52-181" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
+<span id="cb52-182"><a href="#cb52-182" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sdf_repartition</span>(<span class="dv">24</span>)</span>
+<span id="cb52-183"><a href="#cb52-183" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-184"><a href="#cb52-184" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(locations_sdf, <span class="at">width=</span><span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span>
+<span id="cb52-185"><a href="#cb52-185" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-186"><a href="#cb52-186" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-187"><a href="#cb52-187" aria-hidden="true" tabindex="-1"></a>The data contains nearly **94 million rows**!</span>
+<span id="cb52-188"><a href="#cb52-188" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-191"><a href="#cb52-191" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-192"><a href="#cb52-192" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the number of rows in the locations SDF (Spark DataFrame)</span></span>
+<span id="cb52-193"><a href="#cb52-193" aria-hidden="true" tabindex="-1"></a><span class="fu">sdf_nrow</span>(locations_sdf)</span>
+<span id="cb52-194"><a href="#cb52-194" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-195"><a href="#cb52-195" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-196"><a href="#cb52-196" aria-hidden="true" tabindex="-1"></a>And is partitioned equally for optimised wide transformations, especially joins. Wide transformations are those that require data shuffling (exchange) between multiple executors such as aggregations and joins. Meanwhile, narrow transformations do not require any exchange of data. Examples of narrow transformations include select and filter.</span>
+<span id="cb52-197"><a href="#cb52-197" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-200"><a href="#cb52-200" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-201"><a href="#cb52-201" aria-hidden="true" tabindex="-1"></a>locations_sdf <span class="sc">%&gt;%</span> <span class="fu">sdf_partition_sizes</span>()</span>
+<span id="cb52-202"><a href="#cb52-202" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-203"><a href="#cb52-203" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-206"><a href="#cb52-206" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-207"><a href="#cb52-207" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
+<span id="cb52-208"><a href="#cb52-208" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-209"><a href="#cb52-209" aria-hidden="true" tabindex="-1"></a>locations_sdf <span class="ot">&lt;-</span> locations_sdf <span class="sc">%&gt;%</span> </span>
+<span id="cb52-210"><a href="#cb52-210" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(trip_id <span class="sc">&gt;=</span> <span class="dv">40000000</span> <span class="sc">&amp;</span> trip_id <span class="sc">&lt;=</span> <span class="dv">40000100</span>)</span>
+<span id="cb52-211"><a href="#cb52-211" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-212"><a href="#cb52-212" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-213"><a href="#cb52-213" aria-hidden="true" tabindex="-1"></a><span class="fu">### Median household income by neighbourhood data</span></span>
+<span id="cb52-214"><a href="#cb52-214" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-215"><a href="#cb52-215" aria-hidden="true" tabindex="-1"></a>We now load the average household income by neighbourhood in NYC.</span>
+<span id="cb52-216"><a href="#cb52-216" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-219"><a href="#cb52-219" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-220"><a href="#cb52-220" aria-hidden="true" tabindex="-1"></a><span class="co"># Load income data (household income by NYC neighbourhood)</span></span>
+<span id="cb52-221"><a href="#cb52-221" aria-hidden="true" tabindex="-1"></a>nyc_nta_hh_income_file_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"nyc_nta_med_inc"</span>, <span class="st">"nyc_nta_med_inc.csv"</span>)</span>
+<span id="cb52-222"><a href="#cb52-222" aria-hidden="true" tabindex="-1"></a>nyc_nta_hh_income <span class="ot">&lt;-</span> <span class="fu">spark_read_csv</span>(sc, <span class="at">path =</span> nyc_nta_hh_income_file_path, <span class="at">name =</span> <span class="st">"nyc_nta_hh_income"</span>)</span>
+<span id="cb52-223"><a href="#cb52-223" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-224"><a href="#cb52-224" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-227"><a href="#cb52-227" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-228"><a href="#cb52-228" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the income data</span></span>
+<span id="cb52-229"><a href="#cb52-229" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(nyc_nta_hh_income, <span class="at">width =</span> <span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span>
+<span id="cb52-230"><a href="#cb52-230" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-231"><a href="#cb52-231" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-232"><a href="#cb52-232" aria-hidden="true" tabindex="-1"></a><span class="fu">### NYC neighbourhoods data</span></span>
+<span id="cb52-233"><a href="#cb52-233" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-234"><a href="#cb52-234" aria-hidden="true" tabindex="-1"></a>We also load the shapefile using Apache Sedona. Note that we point Sedona to the entire folder and not just the specific .shp file, as is the case when reading shapefiles via sf.</span>
+<span id="cb52-235"><a href="#cb52-235" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-238"><a href="#cb52-238" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-239"><a href="#cb52-239" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the shapefile for NYC neighbourhoods</span></span>
+<span id="cb52-240"><a href="#cb52-240" aria-hidden="true" tabindex="-1"></a>ny_neighs_pathfile <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"shapefiles"</span>, <span class="st">"nynta2020_25a"</span>)</span>
+<span id="cb52-241"><a href="#cb52-241" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="ot">&lt;-</span> <span class="fu">spark_read_shapefile</span>(sc, <span class="at">path =</span> ny_neighs_pathfile, <span class="at">name =</span> <span class="st">"ny_neighbourhoods_shp"</span>)</span>
+<span id="cb52-242"><a href="#cb52-242" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-243"><a href="#cb52-243" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-246"><a href="#cb52-246" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-247"><a href="#cb52-247" aria-hidden="true" tabindex="-1"></a><span class="co"># Display a quick summary of the shapefile data</span></span>
+<span id="cb52-248"><a href="#cb52-248" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="sc">%&gt;%</span> <span class="fu">glimpse</span>()</span>
+<span id="cb52-249"><a href="#cb52-249" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-250"><a href="#cb52-250" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-251"><a href="#cb52-251" aria-hidden="true" tabindex="-1"></a><span class="fu">## Associating neighbourhood with median household income</span></span>
+<span id="cb52-252"><a href="#cb52-252" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-253"><a href="#cb52-253" aria-hidden="true" tabindex="-1"></a>We now join the income and boundaries data using their common ID.</span>
+<span id="cb52-254"><a href="#cb52-254" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-257"><a href="#cb52-257" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-258"><a href="#cb52-258" aria-hidden="true" tabindex="-1"></a><span class="co"># Join the neighbourhood shapefile with the income data</span></span>
+<span id="cb52-259"><a href="#cb52-259" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="ot">&lt;-</span> ny_neighbourhoods_shp <span class="sc">%&gt;%</span></span>
+<span id="cb52-260"><a href="#cb52-260" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(nyc_nta_hh_income, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"NTA2020"</span> <span class="ot">=</span> <span class="st">"GeoID"</span>))</span>
+<span id="cb52-261"><a href="#cb52-261" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-262"><a href="#cb52-262" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-263"><a href="#cb52-263" aria-hidden="true" tabindex="-1"></a>Now, we need to determine the relevant **CRS** that our shapefile uses. If it differs from **EPSG:4326**, we must convert it so that we can match it with the pickup and dropoff coordinates. I have not found a way to determine the CRS using Apache Sedona, so I use sf for that.</span>
+<span id="cb52-264"><a href="#cb52-264" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-267"><a href="#cb52-267" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-268"><a href="#cb52-268" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the shapefile as an SF (Simple Features) object for geospatial operations</span></span>
+<span id="cb52-269"><a href="#cb52-269" aria-hidden="true" tabindex="-1"></a>ny_neighs_sf <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="fu">file.path</span>(ny_neighs_pathfile, <span class="st">"nynta2020.shp"</span>))</span>
+<span id="cb52-270"><a href="#cb52-270" aria-hidden="true" tabindex="-1"></a><span class="fu">st_crs</span>(ny_neighs_sf)</span>
+<span id="cb52-271"><a href="#cb52-271" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-272"><a href="#cb52-272" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-273"><a href="#cb52-273" aria-hidden="true" tabindex="-1"></a>Knowing that it is **EPSG:2263**, we can now convert it to **EPSG:4326**.</span>
+<span id="cb52-274"><a href="#cb52-274" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-277"><a href="#cb52-277" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-278"><a href="#cb52-278" aria-hidden="true" tabindex="-1"></a><span class="co"># Reproject the geometries to a different coordinate reference system (CRS) for consistency</span></span>
+<span id="cb52-279"><a href="#cb52-279" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="ot">&lt;-</span> ny_neighbourhoods_shp <span class="sc">%&gt;%</span></span>
+<span id="cb52-280"><a href="#cb52-280" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb52-281"><a href="#cb52-281" aria-hidden="true" tabindex="-1"></a>    <span class="at">geometry =</span> <span class="fu">st_transform</span>(</span>
+<span id="cb52-282"><a href="#cb52-282" aria-hidden="true" tabindex="-1"></a>      geometry,</span>
+<span id="cb52-283"><a href="#cb52-283" aria-hidden="true" tabindex="-1"></a>      <span class="st">"epsg:2263"</span>,  <span class="co"># Source CRS</span></span>
+<span id="cb52-284"><a href="#cb52-284" aria-hidden="true" tabindex="-1"></a>      <span class="st">"epsg:4326"</span>,  <span class="co"># Target CRS</span></span>
+<span id="cb52-285"><a href="#cb52-285" aria-hidden="true" tabindex="-1"></a>      F</span>
+<span id="cb52-286"><a href="#cb52-286" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb52-287"><a href="#cb52-287" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb52-288"><a href="#cb52-288" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb52-289"><a href="#cb52-289" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span><span class="fu">c</span>(</span>
+<span id="cb52-290"><a href="#cb52-290" aria-hidden="true" tabindex="-1"></a>      BoroCode,</span>
+<span id="cb52-291"><a href="#cb52-291" aria-hidden="true" tabindex="-1"></a>      CountyFIPS,</span>
+<span id="cb52-292"><a href="#cb52-292" aria-hidden="true" tabindex="-1"></a>      NTAAbbrev,</span>
+<span id="cb52-293"><a href="#cb52-293" aria-hidden="true" tabindex="-1"></a>      NTAType,</span>
+<span id="cb52-294"><a href="#cb52-294" aria-hidden="true" tabindex="-1"></a>      CDTA2020,</span>
+<span id="cb52-295"><a href="#cb52-295" aria-hidden="true" tabindex="-1"></a>      CDTAName,</span>
+<span id="cb52-296"><a href="#cb52-296" aria-hidden="true" tabindex="-1"></a>      Shape_Leng,</span>
+<span id="cb52-297"><a href="#cb52-297" aria-hidden="true" tabindex="-1"></a>      Shape_Area</span>
+<span id="cb52-298"><a href="#cb52-298" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb52-299"><a href="#cb52-299" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb52-300"><a href="#cb52-300" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-301"><a href="#cb52-301" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-302"><a href="#cb52-302" aria-hidden="true" tabindex="-1"></a><span class="fu">## Joining locations data with neighbourhoods data</span></span>
+<span id="cb52-303"><a href="#cb52-303" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-304"><a href="#cb52-304" aria-hidden="true" tabindex="-1"></a>Because the boundaries data is very small (about 2 MB on disk), we can **cache** it in memory for faster access. Generally, you are encouraged to cache data that is less than **10 MB**. We are also **broadcasting** the neighbourhoods data to improve performance. Broadcasting means that our data is shared in its entirety with every executor so it is not shuffled when joining. This reduces data transfer overhead and improves performance. </span>
+<span id="cb52-305"><a href="#cb52-305" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-306"><a href="#cb52-306" aria-hidden="true" tabindex="-1"></a>Even if we did not explicitly broadcast our data, it most likely would have been broadcasted automatically due to **Adaptive Query Execution** (AQE) since we enabled it at the start using the option <span class="in">`config$spark.sql.adaptive.enabled &lt;- "true"`</span>. AQE finds the optimal way of conducting joins, and since our neighbourhoods data is minuscule, chances are that it would have been broadcasted to prevent unnecessary shuffling.</span>
+<span id="cb52-307"><a href="#cb52-307" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-310"><a href="#cb52-310" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-311"><a href="#cb52-311" aria-hidden="true" tabindex="-1"></a><span class="co"># Persist the neighbourhood shapefile in memory for faster access</span></span>
+<span id="cb52-312"><a href="#cb52-312" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="ot">&lt;-</span> <span class="fu">sdf_broadcast</span>(ny_neighbourhoods_shp)</span>
+<span id="cb52-313"><a href="#cb52-313" aria-hidden="true" tabindex="-1"></a><span class="fu">sdf_persist</span>(ny_neighbourhoods_shp, <span class="at">storage.level =</span> <span class="st">"MEMORY_ONLY"</span>)</span>
+<span id="cb52-314"><a href="#cb52-314" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-315"><a href="#cb52-315" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-316"><a href="#cb52-316" aria-hidden="true" tabindex="-1"></a>I have found that it is best to use **Spatial SQL** when conducting spatial joins or any other spatial analysis using Apache Sedona functions. To do this, we first need to register our dataframes as temporary **SQL views**. This will be our next step.</span>
+<span id="cb52-317"><a href="#cb52-317" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-320"><a href="#cb52-320" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-321"><a href="#cb52-321" aria-hidden="true" tabindex="-1"></a><span class="co"># Register the dataframes as temporary SQL views for querying</span></span>
+<span id="cb52-322"><a href="#cb52-322" aria-hidden="true" tabindex="-1"></a>locations_sdf <span class="sc">%&gt;%</span> <span class="fu">sdf_register</span>(<span class="st">"locations_sdf_view"</span>)</span>
+<span id="cb52-323"><a href="#cb52-323" aria-hidden="true" tabindex="-1"></a>ny_neighbourhoods_shp <span class="sc">%&gt;%</span> <span class="fu">sdf_register</span>(<span class="st">"ny_neighbourhoods_shp_view"</span>)</span>
+<span id="cb52-324"><a href="#cb52-324" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-325"><a href="#cb52-325" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-326"><a href="#cb52-326" aria-hidden="true" tabindex="-1"></a>Upon registration, we can now conduct a spatial join, asking Apache Sedona to find neighbourhoods that contain specific coordinates using the **ST_Contains** function. You can find documentation on all available Apache Sedona vector functions <span class="co">[</span><span class="ot">here</span><span class="co">](https://sedona.apache.org/latest/api/sql/Function/)</span>.</span>
+<span id="cb52-327"><a href="#cb52-327" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-330"><a href="#cb52-330" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-331"><a href="#cb52-331" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform a spatial join to associate each location (latitude, longitude) with the corresponding neighbourhood</span></span>
+<span id="cb52-332"><a href="#cb52-332" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
+<span id="cb52-333"><a href="#cb52-333" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb52-334"><a href="#cb52-334" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
+<span id="cb52-335"><a href="#cb52-335" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT /*+ BROADCAST(b) */ a.*, b.*</span></span>
+<span id="cb52-336"><a href="#cb52-336" aria-hidden="true" tabindex="-1"></a><span class="st">  FROM locations_sdf_view a</span></span>
+<span id="cb52-337"><a href="#cb52-337" aria-hidden="true" tabindex="-1"></a><span class="st">  LEFT JOIN ny_neighbourhoods_shp_view b</span></span>
+<span id="cb52-338"><a href="#cb52-338" aria-hidden="true" tabindex="-1"></a><span class="st">    ON ST_Contains(b.geometry, ST_Point(a.longitude, a.latitude))</span></span>
+<span id="cb52-339"><a href="#cb52-339" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
+<span id="cb52-340"><a href="#cb52-340" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb52-341"><a href="#cb52-341" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-342"><a href="#cb52-342" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-343"><a href="#cb52-343" aria-hidden="true" tabindex="-1"></a><span class="fu">## Writing data to disk</span></span>
+<span id="cb52-344"><a href="#cb52-344" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-345"><a href="#cb52-345" aria-hidden="true" tabindex="-1"></a>Before saving our updated data, we remove the geometry column, as Delta Lake does not support geometry columns. Moreover, there is no need to keep it in the data, as we don't plan on mapping the data just yet. If you need to write big data geometry files, consider using the **GeoParquet** format. You can do so using Spark's <span class="in">`spark_write_geoparquet`</span> function or the <span class="in">`spark_write_source`</span> function with the mode set to "*geoparquet*".</span>
+<span id="cb52-346"><a href="#cb52-346" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-349"><a href="#cb52-349" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-350"><a href="#cb52-350" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove the geometry column from the final dataset for further analysis</span></span>
+<span id="cb52-351"><a href="#cb52-351" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_no_geom <span class="ot">&lt;-</span> locations_sdf_updated <span class="sc">%&gt;%</span></span>
+<span id="cb52-352"><a href="#cb52-352" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(geometry))</span>
+<span id="cb52-353"><a href="#cb52-353" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-354"><a href="#cb52-354" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-355"><a href="#cb52-355" aria-hidden="true" tabindex="-1"></a>Our final data is as shown below. Not too bad for the few lines of code written.</span>
+<span id="cb52-356"><a href="#cb52-356" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-359"><a href="#cb52-359" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-360"><a href="#cb52-360" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the updated data with all relevant fields (no geometry)</span></span>
+<span id="cb52-361"><a href="#cb52-361" aria-hidden="true" tabindex="-1"></a>withr<span class="sc">::</span><span class="fu">with_options</span>(</span>
+<span id="cb52-362"><a href="#cb52-362" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">pillar.sigfig =</span> <span class="dv">6</span>),</span>
+<span id="cb52-363"><a href="#cb52-363" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(locations_sdf_updated_no_geom, <span class="at">n=</span><span class="dv">10</span>)</span>
+<span id="cb52-364"><a href="#cb52-364" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb52-365"><a href="#cb52-365" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-366"><a href="#cb52-366" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_no_geom <span class="sc">%&gt;%</span> <span class="fu">glimpse</span>()</span>
+<span id="cb52-367"><a href="#cb52-367" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-368"><a href="#cb52-368" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-369"><a href="#cb52-369" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-370"><a href="#cb52-370" aria-hidden="true" tabindex="-1"></a>We now write our data to Delta Lake format as usual.</span>
+<span id="cb52-371"><a href="#cb52-371" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-374"><a href="#cb52-374" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-375"><a href="#cb52-375" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb52-376"><a href="#cb52-376" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-377"><a href="#cb52-377" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the file path for saving the updated dataset</span></span>
+<span id="cb52-378"><a href="#cb52-378" aria-hidden="true" tabindex="-1"></a>save_locations_sdf_updated_one_filepath <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"locations_sdf_updated_one"</span>)</span>
+<span id="cb52-379"><a href="#cb52-379" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-380"><a href="#cb52-380" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the updated dataset to Delta format</span></span>
+<span id="cb52-381"><a href="#cb52-381" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
+<span id="cb52-382"><a href="#cb52-382" aria-hidden="true" tabindex="-1"></a>  locations_sdf_updated_no_geom,</span>
+<span id="cb52-383"><a href="#cb52-383" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> save_locations_sdf_updated_one_filepath</span>
+<span id="cb52-384"><a href="#cb52-384" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb52-385"><a href="#cb52-385" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb52-386"><a href="#cb52-386" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-387"><a href="#cb52-387" aria-hidden="true" tabindex="-1"></a>And disconnect our spark instance.</span>
+<span id="cb52-388"><a href="#cb52-388" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-391"><a href="#cb52-391" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb52-392"><a href="#cb52-392" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from the Spark session once done</span></span>
+<span id="cb52-393"><a href="#cb52-393" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span>
+<span id="cb52-394"><a href="#cb52-394" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
