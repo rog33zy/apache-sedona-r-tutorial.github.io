@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Apache Sedona R Tutorial - 4&nbsp; Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</title>
+<title>Processing Geospatial Big Data with Delta Lake, Sparklyr, and Apache Sedona in R - 4&nbsp; Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -131,7 +131,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
     <div class="pt-lg-2 mt-2 text-left sidebar-header">
     <div class="sidebar-title mb-0 py-0">
-      <a href="./">Apache Sedona R Tutorial</a> 
+      <a href="./">Processing Geospatial Big Data with Delta Lake, Sparklyr, and Apache Sedona in R</a> 
         <div class="sidebar-tools-main">
     <a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
 </div>
@@ -147,7 +147,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Processing Large Datasets with Delta Lake, Sparklyr, and Apache Sedona in R</span></span></a>
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Introduction</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -359,7 +359,7 @@ range</code></pre>
 range</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   table&lt;`dbplyr_BhE89dZkou`&gt; [?? x 1]
+<pre><code># Source:   table&lt;`dbplyr_O777dTCBfY`&gt; [?? x 1]
 # Database: spark_connection
 # ℹ 1 more variable: raster &lt;arrw_bnr&gt;</code></pre>
 </div>
@@ -467,7 +467,7 @@ $ pop_density &lt;dbl&gt; 4927.671, 22022.211, 14979.832, 14245.537, 37489.418, 
 <pre><code>Warning in arrow_collect(object, ...): NAs introduced by coercion to integer range</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   table&lt;`sparklyr_tmp_7ab5ae36_1fb6_4826_9be0_12adb5f8846b`&gt; [?? x 9]
+<pre><code># Source:   table&lt;`sparklyr_tmp_73426160_7142_40f6_acc3_cdc5dd708f61`&gt; [?? x 9]
 # Database: spark_connection
     trip_id latitude longitude is_pickup BoroName  NTA2020 NTAName                         MdHHIncE
       &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;                              &lt;int&gt;

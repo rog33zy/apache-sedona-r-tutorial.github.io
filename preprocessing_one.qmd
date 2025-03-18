@@ -13,7 +13,7 @@ The primary dataset was downloaded from Kaggle [here](https://www.kaggle.com/dat
 
 The overarching goal is to show you how to go about using **Delta Lake**, **Sparklyr**, **Apache Sedona**, and **R** for big data geospatial analysis when you only have an ordinary computer at your disposal.
 
-For my actual analysis, I used the entire 7.4 GB dataset provided, containing about **48 million rows**. However, for this published tutorial, I sometimes use less data so as to timely publish and update this website. For reference, I am using an **M1 MacBook** with **16 GB of RAM** and **500 GB of disk space**. 
+For my actual analysis, I used the entire 7.4 GB dataset provided, containing about **47 million rows**. However, for this published tutorial, I sometimes use less data so as to timely publish and update this website. For reference, I am using an **M1 MacBook** with **16 GB of RAM** and **500 GB of disk space**. 
 
 If you have 8 GB of RAM, I would suggest that you use one of the four datasets available, as they are also relatively massive with about 12 million rows each!
 
@@ -30,7 +30,7 @@ install.packages("arrow")
 install.packages("sparklyr")
 ```
 
-We use `sparklyr` to interface with [Apache Spark](https://aws.amazon.com/what-is/apache-spark/) in R, allowing us to work efficiently with large datasets using distributed computing. The `dplyr` package provides powerful data manipulation functions that integrate seamlessly with Spark, making it easier to transform and summarise data. Finally, we load `arrow`, which enhances Spark’s [performance](https://arrow.apache.org/blog/2019/01/25/r-spark-improvements/) when copying, collecting, and transforming data, thereby improving the overall efficiency of our analysis.
+We use `sparklyr` to interface with [Apache Spark](https://aws.amazon.com/what-is/apache-spark/) in R, allowing us to work efficiently with large datasets using distributed computing. Spark operates on a cluster-based architecture, where a **driver** program coordinates tasks and **executors** perform computations across multiple nodes in parallel. However, when clusters are unavailable, Spark can also run in **local mode**, using a single machine while still leveraging parallelism to speed up computations. This makes it accessible for development and smaller-scale analyses. The `dplyr` package provides powerful data manipulation functions that integrate seamlessly with Spark, making it easier to transform and summarise data. Finally, we load `arrow`, which enhances Spark’s [performance](https://arrow.apache.org/blog/2019/01/25/r-spark-improvements/) when copying, collecting, and transforming data, thereby improving the overall efficiency of our analysis.
 
 ```{r}
 #| output: false
@@ -75,11 +75,11 @@ We shall now create a folder where Spark will store temporary files. By default,
 spark_dir <- file.path(getwd(), "data", "spark")
 ```
 
-We now initialise a list and provide configuration settings for Spark. This is arguably one of the most important steps, as it determines both how fast your data is processed and whether it is successfully processed. A typical Spark process involves reading data from files (for instance), processing it, transmitting it between executors, and then writing it back to files. All of this is made possible by **serialising and deserialising** the data into bytes. Naturally, your choice of serializer will heavily influence the performance of your application. Here, we use **Kryo serialisation**, as it is *"significantly faster and more compact than Java serialisation"* ([source](https://spark.apache.org/docs/latest/tuning.html)).
+We now initialise a list and provide configuration settings for Spark. This is arguably one of the most important steps, as it determines both how fast your data is processed and whether it is successfully processed. A typical Spark process involves reading data from files (for instance), processing it, transmitting it between executors (cores), and then writing it back to files. All of this is made possible by **serialising and deserialising** the data into bytes. Naturally, your choice of serializer will heavily influence the performance of your application. Here, we use **Kryo serialisation**, as it is *"significantly faster and more compact than Java serialisation"* ([source](https://spark.apache.org/docs/latest/tuning.html)).
 
 Spark runs on the **Java Virtual Machine (JVM)**, and **Java heap space** refers to the memory allocated to the JVM during runtime for storing objects and data. The heap memory is divided into **Spark memory (M)**, **reserved memory**, and **user memory**. Spark memory itself is divided into two parts: **execution** and **storage (R)**. Execution memory is used for computations such as shuffles, joins, sorts, and aggregations. Storage memory, on the other hand, is used for caching and propagating internal data across the cluster (when running in cluster mode). Read more about this [here](https://spark.apache.org/docs/latest/tuning.html).
 
-In our case, since we are running our code in **local mode**, we set the JVM heap space to **10GB** using `sparklyr.shell.driver-memory`. We then allocate **70% of the JVM heap space** to Spark memory (M) using the `spark.memory.fraction` option. This means **7GB** is reserved for both storage and execution. By default, **50% of M** (i.e., **3.5GB**) is reserved for storage (R). Although this can be adjusted using `spark.memory.storageFraction`, we leave it at the default here. Importantly, when no execution memory is needed, R can make use of the entire 7GB.
+In our case, since we are running our code in **local mode**, we set the JVM heap space to **10GB** using `sparklyr.shell.driver-memory`. We then allocate **70% of the JVM heap space** to Spark memory (M) using the `spark.memory.fraction` option. This means **7GB** is reserved for both storage and execution. By default, **50% of M** (i.e., **3.5GB**) is reserved for storage (R). Although this can be adjusted using `spark.memory.storageFraction`, we leave it at the default here. Importantly, when no execution memory is needed, R can make use of the entire 7GB. 
 
 Other configuration choices we make include enabling the storage of **2GB of data off-heap** (i.e., outside the JVM) using the settings `spark.memory.offHeap.enabled = "true"` and `spark.memory.offHeap.size = "2g"`. We also instruct Spark **not to write intermediate shuffle data to disk**—to avoid I/O bottlenecks—by setting `spark.sql.shuffle.spill = "false"`.
 
@@ -178,20 +178,20 @@ yellow_cab_sdf <- spark_read_csv(
 print(yellow_cab_sdf, width = Inf)
 ```
 
-Looking at the number of partitions, we see that each core will be responsible for an approximate equal number of rows for each task. This ensures that all cores are doing an equal amount of work, without any being overworked.
-
-```{r}
-# Number of rows per each partition
-yellow_cab_sdf %>% 
-  sdf_partition_sizes()
-```
-
 Below we can see how many columns and rows our data has.
 
 ```{r}
 # Get the number of rows and columns in the DataFrame
 sdf_ncol(yellow_cab_sdf)
 sdf_nrow(yellow_cab_sdf)
+```
+
+Looking at the number of partitions, we see that each core will be responsible for an approximate equal number of rows for each task. This ensures that all cores are doing an equal amount of work, without any being overworked.
+
+```{r}
+# Number of rows per each partition
+yellow_cab_sdf %>% 
+  sdf_partition_sizes()
 ```
 
 ## Preprocessing
@@ -201,7 +201,7 @@ sdf_nrow(yellow_cab_sdf)
 Depending on how much data you loaded, you may find that all the variables are in character format. This is not ideal, both for processing and memory allocation, as strings take up a significant amount of space.
 
 ```{r}
-#| eval: false
+#| eval: true
 
 # Print the schema (column types) of the DataFrame
 sdf_schema(yellow_cab_sdf)

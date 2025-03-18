@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Apache Sedona R Tutorial - 3&nbsp; Processing Vector Data with Apache Sedona and Sparklyr in R</title>
+<title>Processing Geospatial Big Data with Delta Lake, Sparklyr, and Apache Sedona in R - 3&nbsp; Processing Vector Data with Apache Sedona and Sparklyr in R</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -131,7 +131,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
     <div class="pt-lg-2 mt-2 text-left sidebar-header">
     <div class="sidebar-title mb-0 py-0">
-      <a href="./">Apache Sedona R Tutorial</a> 
+      <a href="./">Processing Geospatial Big Data with Delta Lake, Sparklyr, and Apache Sedona in R</a> 
         <div class="sidebar-tools-main">
     <a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
 </div>
@@ -147,7 +147,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Processing Large Datasets with Delta Lake, Sparklyr, and Apache Sedona in R</span></span></a>
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Introduction</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -338,7 +338,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output cell-output-stdout">
 <pre><code>&lt;jobj[23]&gt;
   org.apache.spark.sql.SparkSession
-  org.apache.spark.sql.SparkSession@5bb85469</code></pre>
+  org.apache.spark.sql.SparkSession@12f7ff17</code></pre>
 </div>
 </div>
 <div class="cell">
@@ -367,7 +367,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 range</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   table&lt;`sparklyr_tmp_e9d6fb30_b884_4190_84ff_59457673c057`&gt; [?? x 4]
+<pre><code># Source:   table&lt;`sparklyr_tmp_edf5abab_3dd3_41c4_a79a_d6cd53ade301`&gt; [?? x 4]
 # Database: spark_connection
     trip_id latitude longitude is_pickup
       &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
@@ -608,7 +608,7 @@ PROJCRS["NAD83 / New York Long Island (ftUS)",
 range</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   table&lt;`sparklyr_tmp_19d9eb0f_c4b5_42d6_8835_4db9f1ca3c98`&gt; [?? x 5]
+<pre><code># Source:   table&lt;`sparklyr_tmp_ce3f2155_6fbf_4dad_b7a7_846178fd2db6`&gt; [?? x 5]
 # Database: spark_connection
 # ℹ more rows
 # ℹ 5 more variables: geometry &lt;arrw_bnr&gt;, BoroName &lt;chr&gt;, NTA2020 &lt;chr&gt;,

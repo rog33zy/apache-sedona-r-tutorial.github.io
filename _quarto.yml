@@ -3,7 +3,7 @@ project:
   output-dir: docs
 
 book:
-  title: "Processing Big Data with Delta Lake, Sparklyr, and Apache Sedona in R"
+  title: "Processing Geospatial Big Data with Delta Lake, Sparklyr, and Apache Sedona in R"
   author: "Rodgers Iradukunda"
   search: true
   site-url: https://rog33zy.github.io/apache-sedona-r-tutorial.github.io/
@@ -24,7 +24,7 @@ book:
 format:
   html:
     theme: cosmo  # or replace with [default, style/custom.scss] if you want custom styling
-    fontsize: "20px"
+    fontsize: "18px"
     linestretch: 1.6
     smooth-scroll: true
     toc-depth: 3
