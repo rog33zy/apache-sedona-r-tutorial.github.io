@@ -24,7 +24,7 @@ book:
 format:
   html:
     theme: cosmo  # or replace with [default, style/custom.scss] if you want custom styling
-    fontsize: "16px"
+    fontsize: "20px"
     linestretch: 1.6
     smooth-scroll: true
     toc-depth: 3
