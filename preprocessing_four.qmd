@@ -8,7 +8,7 @@ execute:
 
 ## Introduction
 
-For this chapter, we would like to find out the land cover classification associated with specific pickup and dropoff points. Our assumption is that the type of area where one picks up a taxi or gets dropped off may influence how long the trip takes. Again, do not dwell too much on this assumption — the main objective is to demonstrate another way of extracting data from raster files.
+For this chapter, we would like to find out the land cover classification associated with specific pickup and dropoff points. Our assumption is that the type of area where one picks up a taxi or gets dropped off may influence how long the trip takes. Again, do not dwell too much on this assumption — the main objective is to demonstrate a different way of extracting data from raster files.
 
 We shall make use of the **Local Climate Zones (LCZ) Map** from the **World Urban Database and Access Portal Tools (WUDAPT)**. The US version of this dataset can be accessed [here](https://figshare.com/articles/dataset/CONUS-wide_LCZ_map_and_Training_Areas/11416950). This dataset contains **17 urban land cover classifications**, ranging from compact high-rise buildings to water bodies.
 
@@ -16,10 +16,11 @@ We downloaded a version that was already in **EPSG:4326 CRS** and clipped it bas
 
 **Note**: Raster processing is computationally intensive, so it is preferable to work with smaller files, especially when operating in local mode. You will know a raster file is too large when you receive an error upon attempting to view its contents.
 
-**Important**: The Spark configuration used in this chapter is the same as that used in Chapter 2, and so it is not repeated here for brevity.
+**Important**: The Spark configuration used in this chapter is the same as that used in Chapter 3, and so it is not repeated here for brevity.
 
 ```{r}
 #| echo: false
+#| output: false
 
 # Load required libraries
 library(arrow)
@@ -113,9 +114,6 @@ invoke_static(
   spark_session(sc),
   "r"
 )
-
-# Open Spark UI for monitoring
-spark_web(sc)
 ```
 
 ## Loading the data
@@ -272,3 +270,9 @@ And disconnect from our spark instance.
 # Disconnect Spark session to free resources
 spark_disconnect(sc)
 ```
+
+## References
+
+- Demuzere, M., Hankey, S., Mills, G., Zhang, W., Lu, T., & Bechtel, B. (2020). Combining expert and crowd-sourced training data to map urban form and functions for the continental US. Scientific Data, 7(1), 264. https://doi.org/10.1038/s41597-020-00605-z
+
+- Demuzere, M., Hankey, S., Mills, G., Zhang, W., Lu, T., Bechtel B. (2020): CONUS-wide LCZ map and Training Areas. Figshare. Dataset. https://doi.org/10.6084/m9.figshare.11416950

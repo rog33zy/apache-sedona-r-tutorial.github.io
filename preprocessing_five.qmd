@@ -11,15 +11,18 @@ If you recall, we had initially separated location and non-location data so as t
 
 Having accomplished that, we will now combine the updated locations data with the rest of the trip data.
 
-This will be the last chapter for me, but please go further — create maps based on this data, and perform machine learning analysis too. You can find **Sparklyr machine learning documentation [here](https://spark.rstudio.com/guides/machine-learning/)**.
+This will be the last chapter for me, but please go further — create maps based on this data, and perform machine learning analysis too. You can find **Sparklyr machine learning documentation [here](https://spark.posit.co/guides/mlib.html**.
 
 It has been a joy to come this far, and I hope you have learnt something new throughout this whole tutorial.
 
-**FYI**, because we are not using Apache Sedona in this part, we are using the same Spark configuration as that used in Chapter One.
+**FYI**, because we are not using Apache Sedona in this part, we are using the same Spark configuration as that used in Chapter Two.
 
-Anyhow, **let us get to work!**
+Anyhow, let us get to work!
 
 ```{r}
+#| echo: false
+#| output: false
+
 # Load required libraries
 library(sparklyr)   # Spark connection and data manipulation
 library(dplyr)      # Data manipulation functions
@@ -68,9 +71,9 @@ sc <- spark_connect(
 
 We start by loading the datasets.
 
-As you can see below, in addition to **partitioning the data into 24 parts**, we also **specify the column to partition by**, and use **trip_id** which is common to both datasets.
+As you can see below, in addition to partitioning the data into 24 parts, we also **specify the column to partition by**, and use **trip_id** which is common to both datasets.
 
-This is because we shall later join the datasets based on this column, and we want **rows with the same trip_id to be in the same partitions** so as to **minimise shuffling of data**, which is quite computationally intensive.
+This is because we shall later join the datasets based on this column, and we want rows with the same trip_id to be in the same partitions so as to minimise data shuffling, which is quite computationally intensive as previously underscored.
 
 ```{r}
 # Read locations dataset in Delta format and register as a SQL view for querying
