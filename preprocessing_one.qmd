@@ -9,7 +9,7 @@ execute:
 
 In this chapter, we shall demonstrate how to perform basic data cleaning and feature engineering using Sparklyr, and how to save the data in the Delta Lake format.
 
-The primary dataset was downloaded from Kaggle [here](https://www.kaggle.com/datasets/elemento/nyc-yellow-taxi-trip-data?resource=download). It provides information about taxi trips, including the pickup and dropoff times and locations. Our goal is to enrich it using additional data obtained from geospatial sources, and leave the rest to you to perform analysis and determine how best to predict taxi trip durations.
+The primary dataset was downloaded from Kaggle [here](https://www.kaggle.com/datasets/elemento/nyc-yellow-taxi-trip-data?resource=download). It provides information about taxi trips, including the pickup and dropoff times and locations. Our goal is to enrich it using additional data obtained from geospatial sources, and leave the rest to you to visualise it and perform analysis that predicts taxi trip durations.
 
 The overarching goal is to show you how to go about using **Delta Lake**, **Sparklyr**, **Apache Sedona**, and **R** for big data geospatial analysis when you only have an ordinary computer at your disposal.
 
@@ -43,7 +43,7 @@ library(dplyr)      # Data manipulation functions
 
 We can now use `sparklyr` to download and install Spark. In this tutorial, we shall install **Spark version 3.5.5** and create the `JAVA_HOME` and `SPARK_HOME` environment variables. Although you can initialise these variables system-wide, it is often easier to set them within your working file, especially if you have multiple installations of Spark and Java on your system.
 
-Whilst Spark 3.5 is compiled for Java 8, 11, and 17, I would recommend using **Java 11**, as it has proven to be more stable in my experience compared to the other two versions. Additionally, I cannot overemphasise the importance of downloading a Java version that is **natively designed for your system's processor**. As previously stated, I own an M1 MacBook (ARM 64-bit), so I previously encountered memory issues when using Java designed for Intel processors (x86 64-bit) as the processor was doing extra avoidable work. Switching to an ARM-based Java greatly improved the performance of my code.
+Whilst Spark 3.5 is compiled for Java 8, 11, and 17, I would recommend using **Java 11**, as it has proven to be more stable in my experience compared to the other two versions. Additionally, I cannot overemphasise the importance of downloading a Java version that is **natively designed for your system's processor**. As previously stated, I own an M1 MacBook (ARM 64-bit), so I previously encountered memory issues when using Java designed for Intel processors (x86 64-bit) as the processor was forced to perform extra avoidable work. Switching to an ARM-based Java greatly improved the performance of my code.
 
 You can freely download an appropriate Java version for your machine [here](https://www.azul.com/downloads/?package=jdk#zulu).
 
@@ -135,7 +135,7 @@ config$spark.sql.files.maxPartitionBytes <- "200m"
 config$spark.sql.adaptive.enabled <- "true"  
 ```
 
-After configuring our setup, we now connect to Spark. Note that we have also instructed Spark to install the **Delta** package. This is a necessary step if you want to read from or write to Delta tables, which are commonly used for managing large-scale data with [ACID transaction](https://docs.databricks.com/aws/en/lakehouse/acid) support among many other advantages.
+After configuring our setup, we now connect to Spark. Note that we have also instructed Spark to install the **Delta** package. This is a necessary step if you want to read from or write to Delta tables, which are commonly used for managing large-scale data with [ACID transaction](https://docs.databricks.com/aws/en/lakehouse/acid) support among many other advantages. By including **local[*]** in our spark context, we have told Spark to use all available cores in our computer. If, for instance, you only wanted to use 4, you would change this to **local[4]**.
 
 ```{r}
 # Connect to Spark with the specified configurations
@@ -157,7 +157,7 @@ spark_web(sc)
 
 After successfully setting up a Spark context, we now turn to loading our data. We start by specifying the path where the files are located. Note that we are instructing Spark to read all CSV files within the `yellow_tripdata2` subfolder.
 
-Additionally, we organise our data into **24 partitions**. We chose 24 because it is **three times the number of our total cores (8)**. This approach helps ensure parallelism during processing and prevents data skew, which could otherwise slow down our computations.
+Additionally, we organise our data into **24 partitions**. We chose 24 because it is **three times the number of our total cores (8)**. This approach helps ensure parallelism during processing and prevents [data skew](https://aws.amazon.com/blogs/big-data/detect-and-handle-data-skew-on-aws-glue/), which could otherwise slow down our computations.
 
 ## Loading the data
 
@@ -178,7 +178,7 @@ yellow_cab_sdf <- spark_read_csv(
 print(yellow_cab_sdf, width = Inf)
 ```
 
-Looking at the number of partitions, we see that each core will be responsible for approximately an equal number of rows for each task. This ensures that all cores are doing an equal amount of work, without any being overworked.
+Looking at the number of partitions, we see that each core will be responsible for an approximate equal number of rows for each task. This ensures that all cores are doing an equal amount of work, without any being overworked.
 
 ```{r}
 # Number of rows per each partition
@@ -198,7 +198,7 @@ sdf_nrow(yellow_cab_sdf)
 
 ### Updating the schema
 
-Looking at the schema of our data, we can see that all the variables are in character format. This is not ideal, both for processing and memory allocation, as strings take up a significant amount of space.
+Depending on how much data you loaded, you may find that all the variables are in character format. This is not ideal, both for processing and memory allocation, as strings take up a significant amount of space.
 
 ```{r}
 #| eval: false
@@ -210,7 +210,7 @@ sdf_schema(yellow_cab_sdf)
 We shall, therefore, update the schema accordingly.
 
 ```{r}
-# Data cleaning: Convert columns to appropriate types and handle missing values
+# Data cleaning: Convert columns to appropriate types
 yellow_cab_sdf <- yellow_cab_sdf |>
   mutate(
     VendorID = as.integer(VendorID),  # Convert VendorID to integer
@@ -237,7 +237,7 @@ yellow_cab_sdf <- yellow_cab_sdf |>
 
 ### Missing values
 
-We now want to check if we have any missing values. By calling **`collect()`**, we are triggering an **action**. By default, Spark performs **lazy loading**, meaning it does not execute every line of code immediately. The code is only executed when actions are performed, such as **`collect()`** and **`count()`**.
+We now want to check if we have any missing values. By calling **`collect()`**, we are triggering an **action**. By default, Spark performs **lazy evaluation**, meaning it does not execute every line of code immediately. The code is only executed when actions are performed, such as **`collect()`** and **`count()`**. Learn more about this [here](https://www.projectpro.io/recipes/explain-spark-lazy-evaluation-detail).
 
 By calling `collect()`, we will change the class of the resulting object into an R dataframe rather than a Spark dataframe.
 
@@ -358,7 +358,7 @@ print(yellow_cab_sdf, n=5, width = Inf)
 
 ## Separating the data
 
-At this point, I separate my data into two sets: **location-related data** and other **non-location data**. I do this because the next few steps involve obtaining additional **geospatial variables** solely based on pickup and dropoff coordinates. Instead of working with a dataset containing 20-plus columns, I will now only need four: **`trip_id`**, **`latitude`**, **`longitude`**, and **`is_pickup`**.
+At this point, I separate my data into two sets: **location-related data** and other **non-location data**. I do this because the next few steps involve obtaining additional geospatial variables solely based on pickup and dropoff coordinates. Instead of working with a dataset containing 20-plus columns, I will now only need four: **`trip_id`**, **`latitude`**, **`longitude`**, and **`is_pickup`**.
 
 The only downside is that I will double the number of rows since pickup and dropoff coordinates for the same trip will now be in separate rows. I justify this decision because the alternative—performing heavy spatial joins twice on the same dataset—is quite resource-intensive. Another alternative would be to save the pickup and dropoff locations in separate datasets. Ultimately, you can make various design decisions based on the resources available to you.
 
@@ -413,7 +413,7 @@ print(trip_data_sdf, width = Inf, n=10)
 
 ## Writing the data
 
-Finally, we save the preprocessed data into **Delta Lake**. While we had no choice in determining the format of the initial dataset, we do have a choice in how we write it. Delta Lake is based on Parquet files but comes with additional metadata.
+Finally, we save the preprocessed data into **Delta Lake**. While we had no choice in determining the format of the initial dataset, we do have a choice in how we write it. Delta Lake is based on Parquet files, but incorporates additional metadata that improves the efficiency of dealing with multiple parquet files. 
 
 The main difference between Parquet files and CSV files is that Parquet is columnar-based, while CSV is row-based. This offers several advantages to Parquet files, such as faster reading and smaller file sizes. Delta Lake further enhances Parquet files by adding ACID capabilities, among other features. You can find a detailed discussion of the advantages of using Delta tables over Parquet files [here](https://delta.io/blog/delta-lake-vs-parquet-comparison/).
 

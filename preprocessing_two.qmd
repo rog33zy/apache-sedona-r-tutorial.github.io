@@ -8,11 +8,11 @@ execute:
 
 ## Introduction
 
-In this part, we are going to use the **saved locations data** to add **pickup** and **dropoff neighbourhoods**. We shall then use the neighbourhoods to obtain the **median incomes** of the pickup and dropoff neighbourhoods. Income is a proxy for **affluence**. Humour me by assuming that there is a relationship between the **duration of a taxi trip** and the affluence of either or both the pickup or dropoff locations.
+In this part, we are going to use the saved locations data to determine the **pickup** and **dropoff neighbourhoods** associated with each trip. We shall then use these additional data to obtain the **median household incomes** of the pickup and dropoff neighbourhoods. We use income as a proxy for **affluence**. Humour me by assuming that there is a relationship between the duration of a taxi trip and the affluence of either or both the pickup or dropoff locations.
 
-We shall introduce two new datasets: **NYC NTA boundaries** based on the 2020 census, and **NTA median income** based on the 2012 ACS. The boundaries data is in **vector format**, while the income data is in **CSV format**. To do this, we shall use **Apache Sedona** to merge the boundaries and income data. We will then perform a **spatial join** on the coordinates with the boundaries, determining the pickup and dropoff neighbourhoods.
+We shall introduce two new datasets: **NYC Neighbourhood Tabulation Areas (NTAs) boundaries** based on the [2020 census](https://s-media.nyc.gov/agencies/dcp/assets/files/zip/data-tools/bytes/nynta2020_25a.zip), and **NTA household median income** based on the [2022 American Community Survey (ACS)](https://s-media.nyc.gov/agencies/dcp/assets/files/excel/data-tools/census/acs/Econ_1822_NTA.xlsx). The boundaries data is in **vector format**, while the income data is in **CSV format** (originally .xlsx but filtered for GeoID and MdHHIncE columns, then saved as CSV). To do this, we shall use **Apache Sedona (v1.7.0)** to merge the NTA boundaries and income data. We will then perform a **spatial join** on the coordinates with the boundaries, determining the pickup and dropoff neighbourhoods.
 
-By the way, this will be a **new file** and not the same as the one used for the previous analysis. When working in local mode, I have found that it is more feasible to **separate preprocessing** into multiple steps. Running too many transformations is likely to result in **out-of-memory errors** and take a very long time to complete.
+By the way, this will be a new file and not the same as the one used in Chapter 2. When working in local mode, I have found that it is more feasible to separate preprocessing into multiple stages. Running too many transformations at once is likely to result in out-of-memory errors and take a very long time to complete.
 
 ## Installing and loading packages
 
@@ -54,9 +54,9 @@ setwd(working_dir)
 spark_dir <- file.path(getwd(), "data", "spark")
 ```
 
-The **configuration** will mostly be kept similar to the one in the first file. The main difference is that some of the **Delta configurations** are explicitly included and not added as a package. This is because **Delta** and **Apache Sedona** clash when Delta is installed as a package while creating the Spark context.
+The configuration will mostly be kept similar to the one in the first file. The main difference is that some of the **Delta configurations** are explicitly included and not added as a package. This is because Delta and Apache Sedona clash when Delta is installed as a package when creating the Spark context.
 
-You will notice a few differences in how the **Spark context** is set up this time around.
+You will notice a few differences in how the Spark context is set up this time around. Be sure to use this type of setup when working with Apache Sedona and reading or writing to Delta Lake.
 
 ```{r}
 # Create an empty list for Spark configuration settings
@@ -110,7 +110,7 @@ config$spark.sql.adaptive.enabled <- "true"
 
 ## Instantiating spark context
 
-As you can see, when initiating our Spark context, we explicitly include files associated with **Delta** and **Apache Sedona**. By doing so, **Apache Sedona** and **Delta** do not clash with each other.
+As you can see, when initiating our Spark context, we explicitly include files associated with Delta and Apache Sedona. By doing so, Apache Sedona and Delta packages do not clash with each other.
 
 ```{r}
 # Connect to Spark with the defined configuration and additional packages for geospatial processing
@@ -127,9 +127,7 @@ sc <- spark_connect(
 
 ## Loading Apache Sedona
 
-It is only after initializing our Spark context that we can now load the **Apache Sedona** library and initialize its context. I know it seems like a lot, and it is, but this is how we can use both **Apache Sedona** and **Delta** in R, based on my research.
-
-We are now ready to get started!
+It is only after initializing our Spark context that we can now load the Apache Sedona library and initialize its context. We are now ready to get started!
 
 ```{r}
 library(apache.sedona)
@@ -153,7 +151,7 @@ spark_web(sc)
 
 ### Locations data
 
-We now read our location data, which is thankfully in **Delta** format.
+We now read our location data, which is thankfully in Delta Lake format.
 
 ```{r}
 # Define the folder containing location data (latitude and longitude of yellow cabs)
@@ -175,7 +173,7 @@ The data contains nearly **94 million rows**!
 sdf_nrow(locations_sdf)
 ```
 
-And is partitioned equally for optimised wide operations, especially joins. Wide operations are those that require data shuffling or exchange between multiple executors such as aggregations and joins. Meanwhile, narrow transformations do not require any exchange of data. Examples of narrow transformations include select and filter.
+And is partitioned equally for optimised wide transformations, especially joins. Wide transformations are those that require data shuffling (exchange) between multiple executors such as aggregations and joins. Meanwhile, narrow transformations do not require any exchange of data. Examples of narrow transformations include select and filter.
 
 ```{r}
 locations_sdf %>% sdf_partition_sizes()
@@ -190,7 +188,7 @@ locations_sdf <- locations_sdf %>%
 
 ### Median household income by neighbourhood data
 
-We now load the **average household income** by neighbourhood in **NYC**.
+We now load the average household income by neighbourhood in NYC.
 
 ```{r}
 # Load income data (household income by NYC neighbourhood)
@@ -205,7 +203,7 @@ print(nyc_nta_hh_income, width = Inf, n=10)
 
 ### NYC neighbourhoods data
 
-We also load the **shapefile** using **Apache Sedona**. Note that we point Sedona to the entire folder and not just the specific **.shp** file, as is the case when reading shapefiles via **sf**.
+We also load the shapefile using Apache Sedona. Note that we point Sedona to the entire folder and not just the specific .shp file, as is the case when reading shapefiles via sf.
 
 ```{r}
 # Load the shapefile for NYC neighbourhoods
@@ -220,7 +218,7 @@ ny_neighbourhoods_shp %>% glimpse()
 
 ## Associating neighbourhood with median household income
 
-We now **join** the **income** and **boundaries** data using their common ID.
+We now join the income and boundaries data using their common ID.
 
 ```{r}
 # Join the neighbourhood shapefile with the income data
@@ -228,7 +226,7 @@ ny_neighbourhoods_shp <- ny_neighbourhoods_shp %>%
   left_join(nyc_nta_hh_income, by = c("NTA2020" = "GeoID"))
 ```
 
-Now, we need to determine the relevant **CRS** that our **boundaries** data uses. If it differs from **EPSG:4324**, we must convert it so that we can match it with the **pickup** and **dropoff** coordinates. I have not found a way to determine the CRS using **Apache Sedona**, so I use **sf** for that.
+Now, we need to determine the relevant **CRS** that our shapefile uses. If it differs from **EPSG:4326**, we must convert it so that we can match it with the pickup and dropoff coordinates. I have not found a way to determine the CRS using Apache Sedona, so I use sf for that.
 
 ```{r}
 # Read the shapefile as an SF (Simple Features) object for geospatial operations
@@ -236,7 +234,7 @@ ny_neighs_sf <- st_read(file.path(ny_neighs_pathfile, "nynta2020.shp"))
 st_crs(ny_neighs_sf)
 ```
 
-Knowing that it is **EPSG:2263**, we can now convert it to **EPSG:4324**.
+Knowing that it is **EPSG:2263**, we can now convert it to **EPSG:4326**.
 
 ```{r}
 # Reproject the geometries to a different coordinate reference system (CRS) for consistency
@@ -265,7 +263,9 @@ ny_neighbourhoods_shp <- ny_neighbourhoods_shp %>%
 
 ## Joining locations data with neighbourhoods data
 
-Because the **boundaries** data is very small (about 2 MB on disk), we can **cache** it in memory for faster access. Generally, you are encouraged to cache data that is less than **10 MB**. We are also **broadcasting** the neighbourhoods data to improve performance. **Broadcasting** means that our data is shared in its entirety with every core (in local mode) or executor (in cluster mode) so it is not shuffled when joining. Even if we did not explicitly broadcast our data, it most likely would have been broadcasted automatically due to **Adaptive Query Execution** (AQE) since we enabled it at the start using the option `config$spark.sql.adaptive.enabled <- "true"`. AQE finds the optimal way of conducting joins, and since our neighbourhoods data is minuscule, chances are that it would have been broadcasted to prevent unnecessary shuffling.
+Because the boundaries data is very small (about 2 MB on disk), we can **cache** it in memory for faster access. Generally, you are encouraged to cache data that is less than **10 MB**. We are also **broadcasting** the neighbourhoods data to improve performance. Broadcasting means that our data is shared in its entirety with every executor so it is not shuffled when joining. This reduces data transfer overhead and improves performance. 
+
+Even if we did not explicitly broadcast our data, it most likely would have been broadcasted automatically due to **Adaptive Query Execution** (AQE) since we enabled it at the start using the option `config$spark.sql.adaptive.enabled <- "true"`. AQE finds the optimal way of conducting joins, and since our neighbourhoods data is minuscule, chances are that it would have been broadcasted to prevent unnecessary shuffling.
 
 ```{r}
 # Persist the neighbourhood shapefile in memory for faster access
@@ -273,7 +273,7 @@ ny_neighbourhoods_shp <- sdf_broadcast(ny_neighbourhoods_shp)
 sdf_persist(ny_neighbourhoods_shp, storage.level = "MEMORY_ONLY")
 ```
 
-I have found that it is best to use **Spatial SQL** when conducting spatial joins or any other spatial analysis using **Apache Sedona** functions. To do this, we first need to register our **dataframes** as temporary **SQL views**. This will be our next step.
+I have found that it is best to use **Spatial SQL** when conducting spatial joins or any other spatial analysis using Apache Sedona functions. To do this, we first need to register our dataframes as temporary **SQL views**. This will be our next step.
 
 ```{r}
 # Register the dataframes as temporary SQL views for querying
@@ -281,7 +281,7 @@ locations_sdf %>% sdf_register("locations_sdf_view")
 ny_neighbourhoods_shp %>% sdf_register("ny_neighbourhoods_shp_view")
 ```
 
-Upon registration, we can now conduct a **spatial join**, asking **Apache Sedona** to find neighbourhoods that contain specific coordinates using the **ST_Contains** function. You can find documentation on all available **Apache Sedona** vector functions [here](https://sedona.apache.org/docs/latest/sql-functions/).
+Upon registration, we can now conduct a spatial join, asking Apache Sedona to find neighbourhoods that contain specific coordinates using the **ST_Contains** function. You can find documentation on all available Apache Sedona vector functions [here](https://sedona.apache.org/latest/api/sql/Function/).
 
 ```{r}
 # Perform a spatial join to associate each location (latitude, longitude) with the corresponding neighbourhood
@@ -298,7 +298,7 @@ locations_sdf_updated <- sdf_sql(
 
 ## Writing data to disk
 
-Before saving, we remove the **geometry** column, as **Delta** cannot write geometry columns. Moreover, there is no need to keep it in the data, as we don't plan on mapping all the data just yet. If you need to write big data geometry files, consider using the **GeoParquet** format. You can do so using Spark's `spark_write_geoparquet` function or the `spark_write_source` function with the mode set to **GeoParquet**.
+Before saving our updated data, we remove the geometry column, as Delta Lake does not support geometry columns. Moreover, there is no need to keep it in the data, as we don't plan on mapping the data just yet. If you need to write big data geometry files, consider using the **GeoParquet** format. You can do so using Spark's `spark_write_geoparquet` function or the `spark_write_source` function with the mode set to "*geoparquet*".
 
 ```{r}
 # Remove the geometry column from the final dataset for further analysis
@@ -316,9 +316,11 @@ withr::with_options(
   print(locations_sdf_updated_no_geom, n=10)
 )
 
+locations_sdf_updated_no_geom %>% glimpse()
+
 ```
 
-We now write our data to **Delta** format as usual.
+We now write our data to Delta Lake format as usual.
 
 ```{r}
 #| eval: false
