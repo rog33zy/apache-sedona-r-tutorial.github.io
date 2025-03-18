@@ -2,11 +2,11 @@
   {
     "objectID": "index.html",
     "href": "index.html",
-    "title": "Apache Sedona R Tutorial",
+    "title": "Processing Big Data with Delta Lake, Sparklyr, and Apache Sedona in R",
     "section": "",
     "text": "Hi, my name is Rodgers Iradukunda, a PhD student at the University of Liverpool and part of the Geographic Data Science Lab. I decided to put together this tutorial for R users (R-ddicts?) who, like me, sometimes use geospatial data that is too large to be processed by conventional geospatial libraries, such as sf and raster, which do not natively support distributed programming. Cue in Sparklyr and Apache Sedona, two R libraries that leverage distributed programming to solve this issue. When it comes to programming, I believe in learning by doing, hence this tutorial.\nMost cases where I have seen people struggle with processing big data involve raw data that comes in coordinate form, i.e., lat/ long pairs. For my master’s dissertation, I worked with GPS mobile data that was way larger than any other datasets I had worked with previously. While GPS coordinates are useful, they often need to be augmented with other data to really provide insights. For instance, you often want to determine the administrative area a coordinate pair belongs to. The problem, however, is handling that much data is often untenable when using conventional R libraries. Sparklyr and Apache Sedona offer a solution.\nTo replicate the problem, I used the popular New York City (NYC) taxi dataset that is openly available and used to predict trip durations based on certain variables. The main geographical information provided are pickup and dropoff coordinates. In this tutorial, I focus on using these coordinates to obtain neighbourhood information, median household income, population density, and local climatic zones. In the process, I demonstrate how one would go about processing big data using vector and raster data in R. Another underrated (imo) feauture that I highlight is Delta Lake, a storage system that makes dealing with big data to be more efficient than using more popular CSVs. I did not find much on setting up Sparklyr, Apache Sedona, and Delta Lake in R, and so I hope this this tutorial will address that gap.\nAs a novice in using these tools, I may have made some poor design choices. If you notice any, please let me know so that I make the necessary corrections.",
     "crumbs": [
-      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Processing Large Datasets with Delta Lake, Sparklyr, and Apache Sedona in R</span>"
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Introduction</span>"
     ]
   },
   {

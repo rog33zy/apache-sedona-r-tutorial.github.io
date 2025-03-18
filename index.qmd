@@ -1,5 +1,5 @@
 ---
-title: "Processing Large Datasets with Delta Lake, Sparklyr, and Apache Sedona in R"
+title: "Introduction"
 ---
 
 Hi, my name is Rodgers Iradukunda, a PhD student at the University of Liverpool and part of the Geographic Data Science Lab. I decided to put together this tutorial for R users (R-ddicts?) who, like me, sometimes use geospatial data that is too large to be processed by conventional geospatial libraries, such as sf and raster, which do not natively support distributed programming. Cue in Sparklyr and Apache Sedona, two R libraries that leverage distributed programming to solve this issue. When it comes to programming, I believe in learning by doing, hence this tutorial.
