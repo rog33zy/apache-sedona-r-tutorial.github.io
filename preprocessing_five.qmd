@@ -1,14 +1,8 @@
 ---
 title: "Combining Updated Locations Data with Initial Trip Data"
 execute: 
-  eval: false
+  eval: true
   output: true
-format: 
-  html:
-    self-contained: true
-    toc: true
-    df-print: kable
-editor: visual
 ---
 
 ## Introduction
@@ -68,9 +62,6 @@ sc <- spark_connect(
   config = config,      # Use the specified configurations
   packages = "delta"    # Install the Delta Lake package for optimised storage
 )
-
-# Open Spark web UI for monitoring the connection
-spark_web(sc)
 ```
 
 ## Load the datasets
@@ -87,8 +78,7 @@ locations_sdf_updated_three <- spark_read_delta(
   sc,
   path = file.path(getwd(), "data", "locations_sdf_updated_three")
 ) |> 
-  filter(trip_id > 40000000) %>%  # Optional filtering
-  sdf_repartition(partitions = 24, partition_by = "trip_id") %>%  # Repartition data for efficiency
+  filter(trip_id >= 40000000 & trip_id <= 40000010) %>% # filter for only ten rows 
   sdf_register("locations_sdf_updated_three_view")  # Register as view for SQL queries
 
 # Read trip data in Delta format and register as a SQL view
@@ -96,8 +86,7 @@ trip_data_sdf <- spark_read_delta(
   sc,
   path = file.path(getwd(), "data", "trip_data_sdf")
 ) %>% 
-  filter(trip_id > 40000000) %>%  # Optional filtering
-  sdf_repartition(partitions = 24, partition_by = "trip_id") %>%  # Repartition for optimal join performance
+  filter(trip_id >= 40000000 & trip_id <= 40000010) %>%  # Optional filtering
   sdf_register("trip_data_sdf")
 ```
 
@@ -108,7 +97,7 @@ print(locations_sdf_updated_three, width=Inf)
 ```
 
 ```{r}
-print(trip_data_sdf, width=Inf)
+print(trip_data_sdf, width=Inf, n=10)
 ```
 
 ## Joining the datasets
@@ -156,7 +145,7 @@ merged_one <- left_join(
   )
 
 # Display the merged pickup-enriched dataset
-print(merged_one, width = Inf)
+print(merged_one, width = Inf, n=10)
 ```
 
 We now join our updated data with dropoff location data, again renaming certain variables and dropping others.
@@ -182,7 +171,7 @@ This is what our final dataset looks like.
 
 ```{r}
 # Print the final merged dataset enriched with both pickup and dropoff spatial context
-print(merged_two, width = Inf)
+print(merged_two, width = Inf, n=10)
 ```
 
 Finally, we write the data to disk. As stated earlier, feel free to go beyond this tutorial, creating maps based on NYC neighbourhoods and building models. Good luck, and thank you!

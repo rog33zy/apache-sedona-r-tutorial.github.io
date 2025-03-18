@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.549">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Apache Sedona R Tutorial - 2&nbsp; Preprocessing and Feature Engineering for Yellow Cab Trip Data</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./preprocessing_two.html" rel="next">
+<link href="./index.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+
+</head>
+
+<body class="nav-sidebar docked">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./preprocessing_one.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Preprocessing and Feature Engineering for Yellow Cab Trip Data</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Apache Sedona R Tutorial</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Processing Large Datasets with Delta Lake, Sparklyr, and Apache Sedona in R</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./preprocessing_one.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Preprocessing and Feature Engineering for Yellow Cab Trip Data</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./preprocessing_two.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Processing Vector Data with Apache Sedona and Sparklyr in R</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./preprocessing_three.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./preprocessing_four.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Part Two - Processing Raster Data with Apache Sedona and Sparklyr in R</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./preprocessing_five.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Combining Updated Locations Data with Initial Trip Data</span></span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">2.1</span> Introduction</a></li>
+  <li><a href="#installing-and-loading-packages" id="toc-installing-and-loading-packages" class="nav-link" data-scroll-target="#installing-and-loading-packages"><span class="header-section-number">2.2</span> Installing and loading packages</a></li>
+  <li><a href="#installing-spark-and-setting-environment-variables" id="toc-installing-spark-and-setting-environment-variables" class="nav-link" data-scroll-target="#installing-spark-and-setting-environment-variables"><span class="header-section-number">2.3</span> Installing Spark and setting environment variables</a></li>
+  <li><a href="#configuring-spark" id="toc-configuring-spark" class="nav-link" data-scroll-target="#configuring-spark"><span class="header-section-number">2.4</span> Configuring Spark</a></li>
+  <li><a href="#loading-the-data" id="toc-loading-the-data" class="nav-link" data-scroll-target="#loading-the-data"><span class="header-section-number">2.5</span> Loading the data</a></li>
+  <li><a href="#preprocessing" id="toc-preprocessing" class="nav-link" data-scroll-target="#preprocessing"><span class="header-section-number">2.6</span> Preprocessing</a>
+  <ul class="collapse">
+  <li><a href="#updating-the-schema" id="toc-updating-the-schema" class="nav-link" data-scroll-target="#updating-the-schema"><span class="header-section-number">2.6.1</span> Updating the schema</a></li>
+  <li><a href="#missing-values" id="toc-missing-values" class="nav-link" data-scroll-target="#missing-values"><span class="header-section-number">2.6.2</span> Missing values</a></li>
+  <li><a href="#duplicates" id="toc-duplicates" class="nav-link" data-scroll-target="#duplicates"><span class="header-section-number">2.6.3</span> Duplicates</a></li>
+  <li><a href="#outliers" id="toc-outliers" class="nav-link" data-scroll-target="#outliers"><span class="header-section-number">2.6.4</span> Outliers</a></li>
+  <li><a href="#feauture-engineering" id="toc-feauture-engineering" class="nav-link" data-scroll-target="#feauture-engineering"><span class="header-section-number">2.6.5</span> Feauture Engineering</a></li>
+  <li><a href="#standardisation" id="toc-standardisation" class="nav-link" data-scroll-target="#standardisation"><span class="header-section-number">2.6.6</span> Standardisation</a></li>
+  </ul></li>
+  <li><a href="#separating-the-data" id="toc-separating-the-data" class="nav-link" data-scroll-target="#separating-the-data"><span class="header-section-number">2.7</span> Separating the data</a></li>
+  <li><a href="#writing-the-data" id="toc-writing-the-data" class="nav-link" data-scroll-target="#writing-the-data"><span class="header-section-number">2.8</span> Writing the data</a></li>
+  <li><a href="#disconnecting-spark-context" id="toc-disconnecting-spark-context" class="nav-link" data-scroll-target="#disconnecting-spark-context"><span class="header-section-number">2.9</span> Disconnecting Spark context</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io/edit/main/preprocessing_one.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Preprocessing and Feature Engineering for Yellow Cab Trip Data</span></h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="introduction"><span class="header-section-number">2.1</span> Introduction</h2>
+<p>In this chapter, we shall demonstrate how to perform basic data cleaning and feature engineering using Sparklyr, and how to save the data in the Delta Lake format.</p>
+<p>The primary dataset was downloaded from Kaggle <a href="https://www.kaggle.com/datasets/elemento/nyc-yellow-taxi-trip-data?resource=download">here</a>. It provides information about taxi trips, including the pickup and dropoff times and locations. Our goal is to enrich it using additional data obtained from geospatial sources, and leave the rest to you to perform analysis and determine how best to predict taxi trip durations.</p>
+<p>The overarching goal is to show you how to go about using <strong>Delta Lake</strong>, <strong>Sparklyr</strong>, <strong>Apache Sedona</strong>, and <strong>R</strong> for big data geospatial analysis when you only have an ordinary computer at your disposal.</p>
+<p>For my actual analysis, I used the entire 7.4 GB dataset provided, containing about <strong>48 million rows</strong>. However, for this published tutorial, I use less data so as to timely publish and update this website. For reference, I am using an <strong>M1 MacBook</strong> with <strong>16 GB of RAM</strong> and <strong>500 GB of disk space</strong>.</p>
+<p>If you have 8 GB of RAM, I would suggest that you use one of the four datasets available, as they are also relatively massive with about 12 million rows each!</p>
+<p>Anyhow, enough talking — let us get to work.</p>
+</section>
+<section id="installing-and-loading-packages" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="installing-and-loading-packages"><span class="header-section-number">2.2</span> Installing and loading packages</h2>
+<p>We shall start by installing and loading the necessary libraries: <code>arrow</code>, <code>sparklyr</code>, and <code>dplyr</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"arrow"</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"sparklyr"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We use <code>sparklyr</code> to interface with <a href="https://aws.amazon.com/what-is/apache-spark/">Apache Spark</a> in R, allowing us to work efficiently with large datasets using distributed computing. The <code>dplyr</code> package provides powerful data manipulation functions that integrate seamlessly with Spark, making it easier to transform and summarise data. Finally, we load <code>arrow</code>, which enhances Spark’s <a href="https://arrow.apache.org/blog/2019/01/25/r-spark-improvements/">performance</a> when copying, collecting, and transforming data, thereby improving the overall efficiency of our analysis.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load required libraries</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(arrow)      <span class="co"># Handle efficient data exchange between R and Spark</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sparklyr)   <span class="co"># Spark connection and data manipulation</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)      <span class="co"># Data manipulation functions</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We can now use <code>sparklyr</code> to download and install Spark. In this tutorial, we shall install <strong>Spark version 3.5.5</strong> and create the <code>JAVA_HOME</code> and <code>SPARK_HOME</code> environment variables. Although you can initialise these variables system-wide, it is often easier to set them within your working file, especially if you have multiple installations of Spark and Java on your system.</p>
+<p>Whilst Spark 3.5 is compiled for Java 8, 11, and 17, I would recommend using <strong>Java 11</strong>, as it has proven to be more stable in my experience compared to the other two versions. Additionally, I cannot overemphasise the importance of downloading a Java version that is <strong>natively designed for your system’s processor</strong>. As previously stated, I own an M1 MacBook (ARM 64-bit), so I previously encountered memory issues when using Java designed for Intel processors (x86 64-bit) as the processor was doing extra avoidable work. Switching to an ARM-based Java greatly improved the performance of my code.</p>
+<p>You can freely download an appropriate Java version for your machine <a href="https://www.azul.com/downloads/?package=jdk#zulu">here</a>.</p>
+</section>
+<section id="installing-spark-and-setting-environment-variables" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="installing-spark-and-setting-environment-variables"><span class="header-section-number">2.3</span> Installing Spark and setting environment variables</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install and set up Spark environment</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_install</span>(<span class="st">"3.5.5"</span>)  <span class="co"># Install the specific version of Spark (3.5.5)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Set Java and Spark home directory paths</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"JAVA_HOME"</span><span class="ot">=</span><span class="st">"/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home"</span>)  <span class="co"># Set Java home directory for Spark</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"SPARK_HOME"</span><span class="ot">=</span><span class="fu">spark_home_dir</span>(<span class="at">version =</span> <span class="st">"3.5.5"</span>))  <span class="co"># Set Spark home directory</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="configuring-spark" class="level2" data-number="2.4">
+<h2 data-number="2.4" class="anchored" data-anchor-id="configuring-spark"><span class="header-section-number">2.4</span> Configuring Spark</h2>
+<p>We shall now create a folder where Spark will store temporary files. By default, Spark stores these files in memory, but in our case, we want them to be stored on disk. This is why we specify a <code>spark_dir</code> path to direct Spark to use disk storage for its temporary file storage.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define path for Spark data</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>spark_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"spark"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We now initialise a list and provide configuration settings for Spark. This is arguably one of the most important steps, as it determines both how fast your data is processed and whether it is successfully processed. A typical Spark process involves reading data from files (for instance), processing it, transmitting it between executors, and then writing it back to files. All of this is made possible by <strong>serialising and deserialising</strong> the data into bytes. Naturally, your choice of serializer will heavily influence the performance of your application. Here, we use <strong>Kryo serialisation</strong>, as it is <em>“significantly faster and more compact than Java serialisation”</em> (<a href="https://spark.apache.org/docs/latest/tuning.html">source</a>).</p>
+<p>Spark runs on the <strong>Java Virtual Machine (JVM)</strong>, and <strong>Java heap space</strong> refers to the memory allocated to the JVM during runtime for storing objects and data. The heap memory is divided into <strong>Spark memory (M)</strong>, <strong>reserved memory</strong>, and <strong>user memory</strong>. Spark memory itself is divided into two parts: <strong>execution</strong> and <strong>storage (R)</strong>. Execution memory is used for computations such as shuffles, joins, sorts, and aggregations. Storage memory, on the other hand, is used for caching and propagating internal data across the cluster (when running in cluster mode). Read more about this <a href="https://spark.apache.org/docs/latest/tuning.html">here</a>.</p>
+<p>In our case, since we are running our code in <strong>local mode</strong>, we set the JVM heap space to <strong>10GB</strong> using <code>sparklyr.shell.driver-memory</code>. We then allocate <strong>70% of the JVM heap space</strong> to Spark memory (M) using the <code>spark.memory.fraction</code> option. This means <strong>7GB</strong> is reserved for both storage and execution. By default, <strong>50% of M</strong> (i.e., <strong>3.5GB</strong>) is reserved for storage (R). Although this can be adjusted using <code>spark.memory.storageFraction</code>, we leave it at the default here. Importantly, when no execution memory is needed, R can make use of the entire 7GB.</p>
+<p>Other configuration choices we make include enabling the storage of <strong>2GB of data off-heap</strong> (i.e., outside the JVM) using the settings <code>spark.memory.offHeap.enabled = "true"</code> and <code>spark.memory.offHeap.size = "2g"</code>. We also instruct Spark <strong>not to write intermediate shuffle data to disk</strong>—to avoid I/O bottlenecks—by setting <code>spark.sql.shuffle.spill = "false"</code>.</p>
+<p>To manage memory efficiently, we enable <strong>periodic garbage collection every 60 seconds</strong> with <code>spark.cleaner.periodicGC.interval = "60s"</code>, which helps reclaim unused space. Additionally, we set our <strong>maximum partition file size to 200MB</strong>. It is recommended to keep this between <strong>128MB and 200MB</strong>, depending on your dataset size and cluster resources (<a href="https://www.chaosgenius.io/blog/spark-performance-tuning/">source</a>).</p>
+<p>Finally, we enable <strong>Adaptive Query Execution (AQE)</strong>, which allows Spark to automatically optimise query plans during runtime, such as when performing joins, thereby improving performance without manual interference (<a href="https://www.databricks.com/blog/2020/05/29/adaptive-query-execution-speeding-up-spark-sql-at-runtime.html">source</a>).</p>
+<p>Please update the configuration settings based on your available RAM.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create an empty list for Spark configuration settings</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>config <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Set Spark configurations for memory and performance optimisation</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Use KryoSerializer for better performance</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.serializer <span class="ot">&lt;-</span> <span class="st">"org.apache.spark.serializer.KryoSerializer"</span>  </span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Set temporary directory for Spark</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"-Djava.io.tmpdir="</span>, spark_dir)  </span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Use compressed Oops for JVM performance</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">"-XX:+UseCompressedOops"</span>  </span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Allocate 10GB of memory for the Spark driver</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-memory</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">'10G'</span>  </span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Set fraction of heap memory used for Spark storage</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.fraction <span class="ot">&lt;-</span> <span class="fl">0.7</span>  </span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Set shuffle partitions (local setting based on workload)</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.partitions.local <span class="ot">&lt;-</span> <span class="dv">24</span>  </span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Set extra memory for driver</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.driver.extraJavaOptions <span class="ot">&lt;-</span> <span class="st">"-Xmx1G"</span>  </span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable off-heap memory usage</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span> </span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Set 4GB for off-heap memory</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.size <span class="ot">&lt;-</span> <span class="st">"2g"</span>  </span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Disable shuffle spill to disk</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.spill <span class="ot">&lt;-</span> <span class="st">"false"</span>  </span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a><span class="co"># Periodic garbage collection interval</span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.cleaner.periodicGC.interval <span class="ot">&lt;-</span> <span class="st">"60s"</span>  </span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a><span class="co"># Set max partition size for shuffle files</span></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.files.maxPartitionBytes <span class="ot">&lt;-</span> <span class="st">"200m"</span>  </span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable adaptive query execution</span></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.adaptive.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span>  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>After configuring our setup, we now connect to Spark. Note that we have also instructed Spark to install the <strong>Delta</strong> package. This is a necessary step if you want to read from or write to Delta tables, which are commonly used for managing large-scale data with <a href="https://docs.databricks.com/aws/en/lakehouse/acid">ACID transaction</a> support among many other advantages.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect to Spark with the specified configurations</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>sc <span class="ot">&lt;-</span> <span class="fu">spark_connect</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">master =</span> <span class="st">"local[*]"</span>,  <span class="co"># Use all available cores for local execution</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">config =</span> config,      <span class="co"># Use the specified configurations</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">packages =</span> <span class="st">"delta"</span>    <span class="co"># Install the Delta Lake package for optimised storage</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>I recommend using the <strong>Spark Web User Interface (UI)</strong> to track metrics associated with your Spark application. You can access it as shown below.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Open Spark web UI for monitoring the connection</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_web</span>(sc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>After successfully setting up a Spark context, we now turn to loading our data. We start by specifying the path where the files are located. Note that we are instructing Spark to read all CSV files within the <code>yellow_tripdata2</code> subfolder.</p>
+<p>Additionally, we organise our data into <strong>24 partitions</strong>. We chose 24 because it is <strong>three times the number of our total cores (8)</strong>. This approach helps ensure parallelism during processing and prevents data skew, which could otherwise slow down our computations.</p>
+</section>
+<section id="loading-the-data" class="level2" data-number="2.5">
+<h2 data-number="2.5" class="anchored" data-anchor-id="loading-the-data"><span class="header-section-number">2.5</span> Loading the data</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the path for the yellow cab data</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>yellow_cab_parent_folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"yellow_tripdata2"</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>yellow_cab_filepattern <span class="ot">&lt;-</span> <span class="fu">file.path</span>(yellow_cab_parent_folder, <span class="st">"*csv"</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the yellow cab data from CSV files into a Spark DataFrame</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> <span class="fu">spark_read_csv</span>(</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  sc, </span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> yellow_cab_filepattern, </span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"yellow_cab_sdf"</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sdf_repartition</span>(<span class="dv">24</span>)</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the structure of the DataFrame for inspection</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(yellow_cab_sdf, <span class="at">width =</span> <span class="cn">Inf</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in arrow_collect(object, ...): NAs introduced by coercion to integer
+range</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Source:   table&lt;`sparklyr_tmp_b8367aac_43d2_4afe_9b66_7dc023ce92da`&gt; [?? x 19]
+# Database: spark_connection
+   VendorID tpep_pickup_datetime tpep_dropoff_datetime passenger_count
+      &lt;int&gt; &lt;dttm&gt;               &lt;dttm&gt;                          &lt;int&gt;
+ 1        2 2015-01-18 17:45:00  2015-01-18 17:57:45                 4
+ 2        1 2015-01-31 14:03:11  2015-01-31 14:17:05                 2
+ 3        1 2015-01-28 19:32:25  2015-01-28 19:46:27                 1
+ 4        1 2015-01-05 22:56:32  2015-01-05 23:20:10                 2
+ 5        1 2015-01-13 09:37:19  2015-01-13 09:41:48                 1
+ 6        1 2015-01-16 12:25:43  2015-01-16 12:34:48                 2
+ 7        2 2015-01-09 08:29:19  2015-01-09 08:43:06                 5
+ 8        1 2015-01-16 11:12:02  2015-01-16 11:18:16                 1
+ 9        1 2015-01-05 23:22:23  2015-01-05 23:38:34                 1
+10        2 2015-01-09 19:08:57  2015-01-09 19:34:14                 6
+   trip_distance pickup_longitude pickup_latitude RateCodeID store_and_fwd_flag
+           &lt;dbl&gt;            &lt;dbl&gt;           &lt;dbl&gt;      &lt;int&gt; &lt;chr&gt;             
+ 1          2.31            -74.0            40.8          1 N                 
+ 2          2.3             -74.0            40.8          1 N                 
+ 3          1.5             -74.0            40.7          1 N                 
+ 4         16.3             -73.8            40.6          1 N                 
+ 5          1               -74.0            40.8          1 N                 
+ 6          1.5             -74.0            40.8          1 N                 
+ 7          1.29            -74.0            40.8          1 N                 
+ 8          1.1             -74.0            40.8          1 N                 
+ 9          5               -74.0            40.8          1 N                 
+10          6.31            -74.0            40.7          1 N                 
+   dropoff_longitude dropoff_latitude payment_type fare_amount extra mta_tax
+               &lt;dbl&gt;            &lt;dbl&gt;        &lt;int&gt;       &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;
+ 1             -74.0             40.7            1        10.5   0       0.5
+ 2             -74.0             40.8            1        11     0       0.5
+ 3             -74.0             40.8            1        10     1       0.5
+ 4             -73.9             40.6            2        44     0.5     0.5
+ 5             -74.0             40.8            2         5.5   0       0.5
+ 6             -74.0             40.8            2         8     0       0.5
+ 7             -74.0             40.8            2         9.5   0       0.5
+ 8             -74.0             40.8            2         6     0       0.5
+ 9             -73.9             40.8            2        17     0.5     0.5
+10             -74.0             40.8            1        23     1       0.5
+   tip_amount tolls_amount improvement_surcharge total_amount
+        &lt;dbl&gt;        &lt;dbl&gt;                 &lt;dbl&gt;        &lt;dbl&gt;
+ 1       1.5             0                   0.3         12.8
+ 2       3               0                   0.3         14.8
+ 3       2.35            0                   0.3         14.2
+ 4       0               2                   0.3         47.3
+ 5       0               0                   0.3          6.3
+ 6       0               0                   0.3          8.8
+ 7       0               0                   0.3         10.3
+ 8       0               0                   0.3          6.8
+ 9       0               0                   0.3         18.3
+10       7.2             0                   0.3         32  
+# ℹ more rows</code></pre>
+</div>
+</div>
+<p>Looking at the number of partitions, we see that each core will be responsible for approximately an equal number of rows for each task. This ensures that all cores are doing an equal amount of work, without any being overworked.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Number of rows per each partition</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="sc">%&gt;%</span> </span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sdf_partition_sizes</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   partition_index partition_size
+1                0         531207
+2                1         531207
+3                2         531208
+4                3         531209
+5                4         531208
+6                5         531209
+7                6         531209
+8                7         531209
+9                8         531209
+10               9         531209
+11              10         531209
+12              11         531208
+13              12         531207
+14              13         531207
+15              14         531208
+16              15         531206
+17              16         531206
+18              17         531207
+19              18         531207
+20              19         531207
+21              20         531207
+22              21         531208
+23              22         531208
+24              23         531207</code></pre>
+</div>
+</div>
+<p>Below we can see how many columns and rows our data has.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the number of rows and columns in the DataFrame</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sdf_ncol</span>(yellow_cab_sdf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 19</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sdf_nrow</span>(yellow_cab_sdf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 12748986</code></pre>
+</div>
+</div>
+</section>
+<section id="preprocessing" class="level2" data-number="2.6">
+<h2 data-number="2.6" class="anchored" data-anchor-id="preprocessing"><span class="header-section-number">2.6</span> Preprocessing</h2>
+<section id="updating-the-schema" class="level3" data-number="2.6.1">
+<h3 data-number="2.6.1" class="anchored" data-anchor-id="updating-the-schema"><span class="header-section-number">2.6.1</span> Updating the schema</h3>
+<p>Looking at the schema of our data, we can see that all the variables are in character format. This is not ideal, both for processing and memory allocation, as strings take up a significant amount of space.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the schema (column types) of the DataFrame</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sdf_schema</span>(yellow_cab_sdf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We shall, therefore, update the schema accordingly.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Data cleaning: Convert columns to appropriate types and handle missing values</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">|&gt;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">VendorID =</span> <span class="fu">as.integer</span>(VendorID),  <span class="co"># Convert VendorID to integer</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">tpep_pickup_datetime =</span> <span class="fu">to_timestamp</span>(tpep_pickup_datetime),  <span class="co"># Convert to timestamp</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">tpep_dropoff_datetime =</span> <span class="fu">to_timestamp</span>(tpep_dropoff_datetime),  <span class="co"># Convert to timestamp</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">passenger_count =</span> <span class="fu">as.integer</span>(passenger_count),  <span class="co"># Convert to integer</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">trip_distance =</span> <span class="fu">as.numeric</span>(trip_distance),  <span class="co"># Convert to numeric</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_longitude =</span> <span class="fu">as.numeric</span>(pickup_longitude),  <span class="co"># Convert to numeric</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_latitude =</span> <span class="fu">as.numeric</span>(pickup_latitude),  <span class="co"># Convert to numeric</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">RateCodeID =</span> <span class="fu">as.character</span>(RateCodeID),  <span class="co"># Convert to character</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">store_and_fwd_flag =</span> <span class="fu">as.character</span>(store_and_fwd_flag),  <span class="co"># Convert to character</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_longitude =</span> <span class="fu">as.numeric</span>(dropoff_longitude),  <span class="co"># Convert to numeric</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_latitude =</span> <span class="fu">as.numeric</span>(dropoff_latitude),  <span class="co"># Convert to numeric</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">payment_type =</span> <span class="fu">as.character</span>(payment_type),  <span class="co"># Convert to character</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">fare_amount =</span> <span class="fu">as.numeric</span>(fare_amount),  <span class="co"># Convert to numeric</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">extra =</span> <span class="fu">as.numeric</span>(extra),  <span class="co"># Convert to numeric</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">mta_tax =</span> <span class="fu">as.numeric</span>(mta_tax),  <span class="co"># Convert to numeric</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">tip_amount =</span> <span class="fu">as.numeric</span>(tip_amount),  <span class="co"># Convert to numeric</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">tolls_amount =</span> <span class="fu">as.numeric</span>(tolls_amount),  <span class="co"># Convert to numeric</span></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">improvement_surcharge =</span> <span class="fu">as.numeric</span>(improvement_surcharge),  <span class="co"># Convert to numeric</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_amount =</span> <span class="fu">as.numeric</span>(total_amount)  <span class="co"># Convert to numeric</span></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="missing-values" class="level3" data-number="2.6.2">
+<h3 data-number="2.6.2" class="anchored" data-anchor-id="missing-values"><span class="header-section-number">2.6.2</span> Missing values</h3>
+<p>We now want to check if we have any missing values. By calling <strong><code>collect()</code></strong>, we are triggering an <strong>action</strong>. By default, Spark performs <strong>lazy loading</strong>, meaning it does not execute every line of code immediately. The code is only executed when actions are performed, such as <strong><code>collect()</code></strong> and <strong><code>count()</code></strong>.</p>
+<p>By calling <code>collect()</code>, we will change the class of the resulting object into an R dataframe rather than a Spark dataframe.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Handle missing values: Summarise the missing values in each column</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>missing_values_by_col <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">|&gt;</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise_all</span>(<span class="sc">~</span> <span class="fu">sum</span>(<span class="fu">as.integer</span>(<span class="fu">is.na</span>(.)))) <span class="sc">|&gt;</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">collect</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Missing values are always removed in SQL aggregation functions.
+Use `na.rm = TRUE` to silence this warning
+This warning is displayed once every 8 hours.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Print missing values summary</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(missing_values_by_col, <span class="at">width =</span> <span class="cn">Inf</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 19
+  VendorID tpep_pickup_datetime tpep_dropoff_datetime passenger_count
+     &lt;int&gt;                &lt;int&gt;                 &lt;int&gt;           &lt;int&gt;
+1        0                    0                     0               0
+  trip_distance pickup_longitude pickup_latitude RateCodeID store_and_fwd_flag
+          &lt;int&gt;            &lt;int&gt;           &lt;int&gt;      &lt;int&gt;              &lt;int&gt;
+1             0                0               0          0                  0
+  dropoff_longitude dropoff_latitude payment_type fare_amount extra mta_tax
+              &lt;int&gt;            &lt;int&gt;        &lt;int&gt;       &lt;int&gt; &lt;int&gt;   &lt;int&gt;
+1                 0                0            0           0     0       0
+  tip_amount tolls_amount improvement_surcharge total_amount
+       &lt;int&gt;        &lt;int&gt;                 &lt;int&gt;        &lt;int&gt;
+1          0            0                     3            0</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># print classes of yellow_cab_sdf and missing_values_by_col</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(yellow_cab_sdf <span class="sc">%&gt;%</span> <span class="fu">class</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "tbl_spark" "tbl_sql"   "tbl_lazy"  "tbl"      </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(missing_values_by_col <span class="sc">%&gt;%</span> <span class="fu">class</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "tbl_df"     "tbl"        "data.frame"</code></pre>
+</div>
+</div>
+<p>We can see that the only column with missing values is <strong><code>improvement_surcharge</code></strong>. We shall impute the missing data using the median value of the column and create a new column called <strong><code>improvement_surcharge_imputed</code></strong>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Impute missing values for specific columns (e.g., "improvement_surcharge")</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>input_cols <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"improvement_surcharge"</span>)</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>output_cols <span class="ot">&lt;-</span> <span class="fu">paste0</span>(input_cols, <span class="st">"_imputed"</span>)</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">|&gt;</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ft_imputer</span>(<span class="at">input_cols =</span> input_cols,   <span class="co"># Specify input columns</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>             <span class="at">output_cols =</span> output_cols,  <span class="co"># Specify output columns</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>             <span class="at">strategy =</span> <span class="st">"median"</span>)  <span class="co"># Use median strategy for imputation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="duplicates" class="level3" data-number="2.6.3">
+<h3 data-number="2.6.3" class="anchored" data-anchor-id="duplicates"><span class="header-section-number">2.6.3</span> Duplicates</h3>
+<p>We shall now <strong>remove duplicates</strong> based on specific columns.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove duplicate rows based on specific columns</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> <span class="fu">sdf_drop_duplicates</span>(</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  yellow_cab_sdf,</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">cols =</span> <span class="fu">c</span>(</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"VendorID"</span>,</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"tpep_pickup_datetime"</span>,</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">"tpep_dropoff_datetime"</span>,</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">"pickup_longitude"</span>,</span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">"pickup_latitude"</span>,</span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dropoff_longitude"</span>,</span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dropoff_latitude"</span></span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb28-13"><a href="#cb28-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="outliers" class="level3" data-number="2.6.4">
+<h3 data-number="2.6.4" class="anchored" data-anchor-id="outliers"><span class="header-section-number">2.6.4</span> Outliers</h3>
+<p>We shall also handle <strong>outliers</strong> by filtering out unreasonable values in our dataset.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Handle outliers by filtering unreasonable values in columns</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>summary_stats <span class="ot">&lt;-</span> <span class="fu">sdf_describe</span>(</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  yellow_cab_sdf,</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">cols =</span> <span class="fu">c</span>(</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"passenger_count"</span>,</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"trip_distance"</span>,</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">"fare_amount"</span>,</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">"total_amount"</span></span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">collect</span>()</span>
+<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(summary_stats, <span class="at">width=</span><span class="cn">Inf</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 5 × 5
+  summary passenger_count    trip_distance      fare_amount       
+  &lt;chr&gt;   &lt;chr&gt;              &lt;chr&gt;              &lt;chr&gt;             
+1 count   12744540           12744540           12744540          
+2 mean    1.6814257713499272 13.463742718057857 11.909546539144802
+3 stddev  1.337878603394413  9845.811147870672  10.2934513049107  
+4 min     0                  0.0                -450.0            
+5 max     9                  1.54200045E7       4008.0            
+  total_amount      
+  &lt;chr&gt;             
+1 12744540          
+2 15.113263990870497
+3 1106.6961150825007
+4 -450.3            
+5 3950611.6         </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter out outliers based on summary statistics</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">|&gt;</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(fare_amount <span class="sc">&gt;</span> <span class="dv">0</span> <span class="sc">&amp;</span> fare_amount <span class="sc">&lt;=</span> <span class="dv">1000</span>,</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>         trip_distance <span class="sc">&gt;</span> <span class="dv">0</span> <span class="sc">&amp;</span> trip_distance <span class="sc">&lt;</span> <span class="dv">100</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="feauture-engineering" class="level3" data-number="2.6.5">
+<h3 data-number="2.6.5" class="anchored" data-anchor-id="feauture-engineering"><span class="header-section-number">2.6.5</span> Feauture Engineering</h3>
+<p>This is followed by performing <strong>feature engineering</strong>, where we derive certain columns such as the <strong>hour</strong>, <strong>day</strong>, <strong>week</strong>, and <strong>month</strong> of pickup and dropoff. We also derive variables indicating whether the pickup and dropoff occurred on a weekend and whether the pickup was during rush hour.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Feature Engineering: Create new time-based features (pickup and dropoff times)</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">|&gt;</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_hour =</span> <span class="fu">hour</span>(tpep_pickup_datetime),  <span class="co"># Hour of the pickup</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_dayofweek =</span> <span class="fu">date_format</span>(tpep_pickup_datetime, <span class="st">"E"</span>),  <span class="co"># Day of the week for pickup</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_week =</span> <span class="fu">weekofyear</span>(tpep_pickup_datetime),  <span class="co"># Week of the year for pickup</span></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_month =</span> <span class="fu">month</span>(tpep_pickup_datetime),  <span class="co"># Month of pickup</span></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_hour =</span> <span class="fu">hour</span>(tpep_dropoff_datetime),  <span class="co"># Hour of the dropoff</span></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_dayofweek =</span> <span class="fu">date_format</span>(tpep_pickup_datetime, <span class="st">"E"</span>),  <span class="co"># Day of the week for dropoff</span></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_week =</span> <span class="fu">weekofyear</span>(tpep_dropoff_datetime),  <span class="co"># Week of the year for dropoff</span></span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_month =</span> <span class="fu">month</span>(tpep_dropoff_datetime),  <span class="co"># Month of dropoff</span></span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">is_weekend_pickup =</span> <span class="fu">ifelse</span>(pickup_dayofweek <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Sat"</span>, <span class="st">"Sun"</span>), <span class="dv">1</span>, <span class="dv">0</span>),  <span class="co"># Weekend pickup flag</span></span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">is_weekend_dropoff =</span> <span class="fu">ifelse</span>(dropoff_dayofweek <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Sat"</span>, <span class="st">"Sun"</span>), <span class="dv">1</span>, <span class="dv">0</span>),  <span class="co"># Weekend dropoff flag</span></span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">is_rush_hour_pickup =</span> <span class="fu">ifelse</span>(pickup_hour <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">7</span><span class="sc">:</span><span class="dv">9</span>, <span class="dv">16</span><span class="sc">:</span><span class="dv">19</span>), <span class="dv">1</span>, <span class="dv">0</span>)  <span class="co"># Rush hour pickup flag</span></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="standardisation" class="level3" data-number="2.6.6">
+<h3 data-number="2.6.6" class="anchored" data-anchor-id="standardisation"><span class="header-section-number">2.6.6</span> Standardisation</h3>
+<p>We now normalise <code>trip_distance</code> and <code>fare_amount</code> to standardise our data for modelling.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Normalise features to standardise data for machine learning</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">%&gt;%</span></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">trip_distance_scaled =</span> (trip_distance <span class="sc">-</span> <span class="fu">mean</span>(trip_distance)) <span class="sc">/</span> <span class="fu">sd</span>(trip_distance),  <span class="co"># Standardise trip distance</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">fare_amount_scaled =</span> (fare_amount <span class="sc">-</span> <span class="fu">mean</span>(fare_amount)) <span class="sc">/</span> <span class="fu">sd</span>(fare_amount)  <span class="co"># Standardise fare amount</span></span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the first 5 rows of the updated data</span></span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(yellow_cab_sdf, <span class="at">n=</span><span class="dv">5</span>, <span class="at">width =</span> <span class="cn">Inf</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in arrow_collect(object, ...): NAs introduced by coercion to integer
+range</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Source:   SQL [?? x 33]
+# Database: spark_connection
+  VendorID tpep_pickup_datetime tpep_dropoff_datetime passenger_count
+     &lt;int&gt; &lt;dttm&gt;               &lt;dttm&gt;                          &lt;int&gt;
+1        2 2015-01-01 00:00:00  2015-01-01 00:00:00                 1
+2        1 2015-01-01 00:02:57  2015-01-01 00:05:36                 1
+3        1 2015-01-01 00:06:44  2015-01-01 00:07:06                 2
+4        1 2015-01-01 00:01:51  2015-01-01 00:07:07                 3
+5        1 2015-01-01 00:03:58  2015-01-01 00:07:23                 1
+  trip_distance pickup_longitude pickup_latitude RateCodeID store_and_fwd_flag
+          &lt;dbl&gt;            &lt;dbl&gt;           &lt;dbl&gt; &lt;chr&gt;      &lt;chr&gt;             
+1          1.68            -74.0            40.8 1          N                 
+2          0.6             -74.0            40.8 1          N                 
+3          7.8             -74.0            40.8 1          N                 
+4          0.7             -74.0            40.7 1          N                 
+5          0.3             -74.0            40.7 1          N                 
+  dropoff_longitude dropoff_latitude payment_type fare_amount extra mta_tax
+              &lt;dbl&gt;            &lt;dbl&gt; &lt;chr&gt;              &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;
+1               0                0   2                   10     0       0.5
+2             -74.0             40.8 1                    4     0.5     0.5
+3             -74.0             40.8 2                    2.5   0.5     0.5
+4             -74.0             40.7 2                    5.5   0.5     0.5
+5             -74.0             40.7 2                    4     0.5     0.5
+  tip_amount tolls_amount improvement_surcharge total_amount
+       &lt;dbl&gt;        &lt;dbl&gt;                 &lt;dbl&gt;        &lt;dbl&gt;
+1        0              0                   0.3         10.8
+2        1.5            0                   0            6.8
+3        0              0                   0            3.8
+4        0              0                   0            6.8
+5        0              0                   0            5.3
+  improvement_surcharge_imputed pickup_hour pickup_dayofweek pickup_week
+                          &lt;dbl&gt;       &lt;int&gt; &lt;chr&gt;                  &lt;int&gt;
+1                           0.3           0 Thu                        1
+2                           0             0 Thu                        1
+3                           0             0 Thu                        1
+4                           0             0 Thu                        1
+5                           0             0 Thu                        1
+  pickup_month dropoff_hour dropoff_dayofweek dropoff_week dropoff_month
+         &lt;int&gt;        &lt;int&gt; &lt;chr&gt;                    &lt;int&gt;         &lt;int&gt;
+1            1            0 Thu                          1             1
+2            1            0 Thu                          1             1
+3            1            0 Thu                          1             1
+4            1            0 Thu                          1             1
+5            1            0 Thu                          1             1
+  is_weekend_pickup is_weekend_dropoff is_rush_hour_pickup trip_distance_scaled
+              &lt;dbl&gt;              &lt;dbl&gt;               &lt;dbl&gt;                &lt;dbl&gt;
+1                 0                  0                   0               -0.331
+2                 0                  0                   0               -0.650
+3                 0                  0                   0                1.48 
+4                 0                  0                   0               -0.620
+5                 0                  0                   0               -0.739
+  fare_amount_scaled
+               &lt;dbl&gt;
+1             -0.192
+2             -0.807
+3             -0.961
+4             -0.653
+5             -0.807
+# ℹ more rows</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="separating-the-data" class="level2" data-number="2.7">
+<h2 data-number="2.7" class="anchored" data-anchor-id="separating-the-data"><span class="header-section-number">2.7</span> Separating the data</h2>
+<p>At this point, I separate my data into two sets: <strong>location-related data</strong> and other <strong>non-location data</strong>. I do this because the next few steps involve obtaining additional <strong>geospatial variables</strong> solely based on pickup and dropoff coordinates. Instead of working with a dataset containing 20-plus columns, I will now only need four: <strong><code>trip_id</code></strong>, <strong><code>latitude</code></strong>, <strong><code>longitude</code></strong>, and <strong><code>is_pickup</code></strong>.</p>
+<p>The only downside is that I will double the number of rows since pickup and dropoff coordinates for the same trip will now be in separate rows. I justify this decision because the alternative—performing heavy spatial joins twice on the same dataset—is quite resource-intensive. Another alternative would be to save the pickup and dropoff locations in separate datasets. Ultimately, you can make various design decisions based on the resources available to you.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Separate data into two parts: location and trip metadata</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">%&gt;%</span> </span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sdf_with_unique_id</span>(<span class="at">id =</span> <span class="st">"trip_id"</span>)  <span class="co"># Add unique trip ID</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create separate DataFrames for pickup and dropoff locations</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>pickup_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">%&gt;%</span> </span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>    trip_id,</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">latitude =</span> pickup_latitude,</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">longitude =</span> pickup_longitude,</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">is_pickup =</span> <span class="dv">1</span>  <span class="co"># Flag for pickup locations</span></span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>dropoff_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">%&gt;%</span> </span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(</span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>    trip_id,</span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">latitude =</span> dropoff_latitude,</span>
+<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">longitude =</span> dropoff_longitude,</span>
+<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">is_pickup =</span> <span class="dv">0</span>  <span class="co"># Flag for dropoff locations</span></span>
+<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-18"><a href="#cb37-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine pickup and dropoff locations into one DataFrame</span></span>
+<span id="cb37-19"><a href="#cb37-19" aria-hidden="true" tabindex="-1"></a>locations_sdf <span class="ot">&lt;-</span> <span class="fu">sdf_bind_rows</span>(</span>
+<span id="cb37-20"><a href="#cb37-20" aria-hidden="true" tabindex="-1"></a>  pickup_sdf,</span>
+<span id="cb37-21"><a href="#cb37-21" aria-hidden="true" tabindex="-1"></a>  dropoff_sdf</span>
+<span id="cb37-22"><a href="#cb37-22" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb37-23"><a href="#cb37-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-24"><a href="#cb37-24" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(locations_sdf, <span class="at">width =</span> <span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in arrow_collect(object, ...): NAs introduced by coercion to integer
+range</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Source:   table&lt;`sparklyr_tmp__af562dfa_cd34_4cfc_98ab_0ffb428e812f`&gt; [?? x 4]
+# Database: spark_connection
+   trip_id latitude longitude is_pickup
+     &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+ 1     400     40.8     -74.0         1
+ 2     401     40.8     -74.0         1
+ 3     402     40.7     -74.0         1
+ 4     403     40.7     -74.0         1
+ 5     404      0         0           1
+ 6     405     40.8     -74.0         1
+ 7     400     40.8     -74.0         0
+ 8     401     40.8     -73.9         0
+ 9     402     40.7     -74.0         0
+10     403     40.7     -74.0         0
+# ℹ more rows</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create another DataFrame for non-location trip data (excluding coordinates)</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>trip_data_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">%&gt;%</span> </span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span><span class="fu">c</span>(pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude)  <span class="co"># Exclude latitude and longitude</span></span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(trip_data_sdf, <span class="at">width =</span> <span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in arrow_collect(object, ...): NAs introduced by coercion to integer
+range</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Source:   SQL [?? x 30]
+# Database: spark_connection
+  VendorID tpep_pickup_datetime tpep_dropoff_datetime passenger_count
+     &lt;int&gt; &lt;dttm&gt;               &lt;dttm&gt;                          &lt;int&gt;
+1        2 2015-01-01 00:32:14  2015-01-01 00:40:14                 2
+2        1 2015-01-01 00:30:35  2015-01-01 00:40:15                 1
+3        1 2015-01-01 00:30:28  2015-01-01 00:40:22                 1
+4        2 2015-01-01 00:28:51  2015-01-01 00:40:22                 1
+5        1 2015-01-01 00:23:18  2015-01-01 00:40:22                 2
+6        2 2015-01-01 00:24:48  2015-01-01 00:40:23                 2
+  trip_distance RateCodeID store_and_fwd_flag payment_type fare_amount extra
+          &lt;dbl&gt; &lt;chr&gt;      &lt;chr&gt;              &lt;chr&gt;              &lt;dbl&gt; &lt;dbl&gt;
+1          1.82 1          N                  2                    8     0.5
+2          2    1          N                  2                    9.5   0.5
+3          4.7  1          N                  1                   14.7   0.5
+4          1.46 1          N                  1                    9.5   0.5
+5          2    1          N                  2                   11.5   0.5
+6          2.46 1          N                  1                   12     0.5
+  mta_tax tip_amount tolls_amount improvement_surcharge total_amount
+    &lt;dbl&gt;      &lt;dbl&gt;        &lt;dbl&gt;                 &lt;dbl&gt;        &lt;dbl&gt;
+1     0.5       0               0                   0.3          9.3
+2     0.5       0               0                   0           10.8
+3     0.5       3.2             0                   0           19.2
+4     0.5       3               0                   0.3         13.8
+5     0.5       0               0                   0           12.8
+6     0.5       3.75            0                   0.3         17.0
+  improvement_surcharge_imputed pickup_hour pickup_dayofweek pickup_week
+                          &lt;dbl&gt;       &lt;int&gt; &lt;chr&gt;                  &lt;int&gt;
+1                           0.3           0 Thu                        1
+2                           0             0 Thu                        1
+3                           0             0 Thu                        1
+4                           0.3           0 Thu                        1
+5                           0             0 Thu                        1
+6                           0.3           0 Thu                        1
+  pickup_month dropoff_hour dropoff_dayofweek dropoff_week dropoff_month
+         &lt;int&gt;        &lt;int&gt; &lt;chr&gt;                    &lt;int&gt;         &lt;int&gt;
+1            1            0 Thu                          1             1
+2            1            0 Thu                          1             1
+3            1            0 Thu                          1             1
+4            1            0 Thu                          1             1
+5            1            0 Thu                          1             1
+6            1            0 Thu                          1             1
+  is_weekend_pickup is_weekend_dropoff is_rush_hour_pickup trip_distance_scaled
+              &lt;dbl&gt;              &lt;dbl&gt;               &lt;dbl&gt;                &lt;dbl&gt;
+1                 0                  0                   0               -0.290
+2                 0                  0                   0               -0.236
+3                 0                  0                   0                0.561
+4                 0                  0                   0               -0.396
+5                 0                  0                   0               -0.236
+6                 0                  0                   0               -0.101
+  fare_amount_scaled trip_id
+               &lt;dbl&gt;   &lt;dbl&gt;
+1            -0.397      400
+2            -0.243      401
+3             0.290      402
+4            -0.243      403
+5            -0.0378     404
+6             0.0135     405</code></pre>
+</div>
+</div>
+</section>
+<section id="writing-the-data" class="level2" data-number="2.8">
+<h2 data-number="2.8" class="anchored" data-anchor-id="writing-the-data"><span class="header-section-number">2.8</span> Writing the data</h2>
+<p>Finally, we save the preprocessed data into <strong>Delta Lake</strong>. While we had no choice in determining the format of the initial dataset, we do have a choice in how we write it. Delta Lake is based on Parquet files but comes with additional metadata.</p>
+<p>The main difference between Parquet files and CSV files is that Parquet is columnar-based, while CSV is row-based. This offers several advantages to Parquet files, such as faster reading and smaller file sizes. Delta Lake further enhances Parquet files by adding ACID capabilities, among other features. You can find a detailed discussion of the advantages of using Delta tables over Parquet files <a href="https://delta.io/blog/delta-lake-vs-parquet-comparison/">here</a>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the location and trip data to disk using Delta Lake format</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>save_file_path_locations_sdf <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"locations_sdf"</span>)</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>  locations_sdf,</span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>  save_file_path_locations_sdf,</span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">mode =</span> <span class="st">"overwrite"</span>  <span class="co"># Overwrite existing file if it exists</span></span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a>save_file_path_trip_data_sdf <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"trip_data_sdf"</span>)</span>
+<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
+<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a>  trip_data_sdf,</span>
+<span id="cb43-12"><a href="#cb43-12" aria-hidden="true" tabindex="-1"></a>  save_file_path_trip_data_sdf,</span>
+<span id="cb43-13"><a href="#cb43-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">mode =</span> <span class="st">"overwrite"</span>  <span class="co"># Overwrite existing file if it exists</span></span>
+<span id="cb43-14"><a href="#cb43-14" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="disconnecting-spark-context" class="level2" data-number="2.9">
+<h2 data-number="2.9" class="anchored" data-anchor-id="disconnecting-spark-context"><span class="header-section-number">2.9</span> Disconnecting Spark context</h2>
+<p>Finally, we disconnect from our Spark context to release the memory being held by Spark.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from Spark session</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+
+
+<!-- -->
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  const viewSource = window.document.getElementById('quarto-view-source') ||
+                     window.document.getElementById('quarto-code-tools-source');
+  if (viewSource) {
+    const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+    viewSource.addEventListener("click", function(e) {
+      if (sourceUrl) {
+        // rstudio viewer pane
+        if (/\bcapabilities=\b/.test(window.location)) {
+          window.open(sourceUrl);
+        } else {
+          window.location.href = sourceUrl;
+        }
+      } else {
+        const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+        modal.show();
+      }
+      return false;
+    });
+  }
+  function toggleCodeHandler(show) {
+    return function(e) {
+      const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+      for (let i=0; i<detailsSrc.length; i++) {
+        const details = detailsSrc[i].parentElement;
+        if (show) {
+          details.open = true;
+        } else {
+          details.removeAttribute("open");
+        }
+      }
+      const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+      const fromCls = show ? "hidden" : "unhidden";
+      const toCls = show ? "unhidden" : "hidden";
+      for (let i=0; i<cellCodeDivs.length; i++) {
+        const codeDiv = cellCodeDivs[i];
+        if (codeDiv.classList.contains(fromCls)) {
+          codeDiv.classList.remove(fromCls);
+          codeDiv.classList.add(toCls);
+        } 
+      }
+      return false;
+    }
+  }
+  const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+  if (hideAllCode) {
+    hideAllCode.addEventListener("click", toggleCodeHandler(false));
+  }
+  const showAllCode = window.document.getElementById("quarto-show-all-code");
+  if (showAllCode) {
+    showAllCode.addEventListener("click", toggleCodeHandler(true));
+  }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./index.html" class="pagination-link  aria-label=" &lt;span="" large="" datasets="" with="" delta="" lake,="" sparklyr,="" and="" apache="" sedona="" in="" r&lt;="" span&gt;"="">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Processing Large Datasets with Delta Lake, Sparklyr, and Apache Sedona in R</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./preprocessing_two.html" class="pagination-link" aria-label="<span class='chapter-number'>3</span>&nbsp; <span class='chapter-title'>Processing Vector Data with Apache Sedona and Sparklyr in R</span>">
+        <span class="nav-page-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Processing Vector Data with Apache Sedona and Sparklyr in R</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
+<div class="sourceCode" id="cb45" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Preprocessing and Feature Engineering for Yellow Cab Trip Data"</span></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span><span class="co"> </span></span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a><span class="co">  eval: true</span></span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a><span class="co">  output: true</span></span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a><span class="fu">## Introduction</span></span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>In this chapter, we shall demonstrate how to perform basic data cleaning and feature engineering using Sparklyr, and how to save the data in the Delta Lake format.</span>
+<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a>The primary dataset was downloaded from Kaggle <span class="co">[</span><span class="ot">here</span><span class="co">](https://www.kaggle.com/datasets/elemento/nyc-yellow-taxi-trip-data?resource=download)</span>. It provides information about taxi trips, including the pickup and dropoff times and locations. Our goal is to enrich it using additional data obtained from geospatial sources, and leave the rest to you to perform analysis and determine how best to predict taxi trip durations.</span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>The overarching goal is to show you how to go about using **Delta Lake**, **Sparklyr**, **Apache Sedona**, and **R** for big data geospatial analysis when you only have an ordinary computer at your disposal.</span>
+<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a>For my actual analysis, I used the entire 7.4 GB dataset provided, containing about **48 million rows**. However, for this published tutorial, I use less data so as to timely publish and update this website. For reference, I am using an **M1 MacBook** with **16 GB of RAM** and **500 GB of disk space**. </span>
+<span id="cb45-17"><a href="#cb45-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-18"><a href="#cb45-18" aria-hidden="true" tabindex="-1"></a>If you have 8 GB of RAM, I would suggest that you use one of the four datasets available, as they are also relatively massive with about 12 million rows each!</span>
+<span id="cb45-19"><a href="#cb45-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-20"><a href="#cb45-20" aria-hidden="true" tabindex="-1"></a>Anyhow, enough talking — let us get to work.</span>
+<span id="cb45-21"><a href="#cb45-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-22"><a href="#cb45-22" aria-hidden="true" tabindex="-1"></a><span class="fu">## Installing and loading packages</span></span>
+<span id="cb45-23"><a href="#cb45-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-24"><a href="#cb45-24" aria-hidden="true" tabindex="-1"></a>We shall start by installing and loading the necessary libraries: <span class="in">`arrow`</span>, <span class="in">`sparklyr`</span>, and <span class="in">`dplyr`</span>.</span>
+<span id="cb45-25"><a href="#cb45-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-28"><a href="#cb45-28" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-29"><a href="#cb45-29" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb45-30"><a href="#cb45-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-31"><a href="#cb45-31" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"arrow"</span>)</span>
+<span id="cb45-32"><a href="#cb45-32" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"sparklyr"</span>)</span>
+<span id="cb45-33"><a href="#cb45-33" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-34"><a href="#cb45-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-35"><a href="#cb45-35" aria-hidden="true" tabindex="-1"></a>We use <span class="in">`sparklyr`</span> to interface with <span class="co">[</span><span class="ot">Apache Spark</span><span class="co">](https://aws.amazon.com/what-is/apache-spark/)</span> in R, allowing us to work efficiently with large datasets using distributed computing. The <span class="in">`dplyr`</span> package provides powerful data manipulation functions that integrate seamlessly with Spark, making it easier to transform and summarise data. Finally, we load <span class="in">`arrow`</span>, which enhances Spark’s <span class="co">[</span><span class="ot">performance</span><span class="co">](https://arrow.apache.org/blog/2019/01/25/r-spark-improvements/)</span> when copying, collecting, and transforming data, thereby improving the overall efficiency of our analysis.</span>
+<span id="cb45-36"><a href="#cb45-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-39"><a href="#cb45-39" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-40"><a href="#cb45-40" aria-hidden="true" tabindex="-1"></a><span class="co">#| output: false</span></span>
+<span id="cb45-41"><a href="#cb45-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-42"><a href="#cb45-42" aria-hidden="true" tabindex="-1"></a><span class="co"># Load required libraries</span></span>
+<span id="cb45-43"><a href="#cb45-43" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(arrow)      <span class="co"># Handle efficient data exchange between R and Spark</span></span>
+<span id="cb45-44"><a href="#cb45-44" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sparklyr)   <span class="co"># Spark connection and data manipulation</span></span>
+<span id="cb45-45"><a href="#cb45-45" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)      <span class="co"># Data manipulation functions</span></span>
+<span id="cb45-46"><a href="#cb45-46" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-47"><a href="#cb45-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-48"><a href="#cb45-48" aria-hidden="true" tabindex="-1"></a>We can now use <span class="in">`sparklyr`</span> to download and install Spark. In this tutorial, we shall install **Spark version 3.5.5** and create the <span class="in">`JAVA_HOME`</span> and <span class="in">`SPARK_HOME`</span> environment variables. Although you can initialise these variables system-wide, it is often easier to set them within your working file, especially if you have multiple installations of Spark and Java on your system.</span>
+<span id="cb45-49"><a href="#cb45-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-50"><a href="#cb45-50" aria-hidden="true" tabindex="-1"></a>Whilst Spark 3.5 is compiled for Java 8, 11, and 17, I would recommend using **Java 11**, as it has proven to be more stable in my experience compared to the other two versions. Additionally, I cannot overemphasise the importance of downloading a Java version that is **natively designed for your system's processor**. As previously stated, I own an M1 MacBook (ARM 64-bit), so I previously encountered memory issues when using Java designed for Intel processors (x86 64-bit) as the processor was doing extra avoidable work. Switching to an ARM-based Java greatly improved the performance of my code.</span>
+<span id="cb45-51"><a href="#cb45-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-52"><a href="#cb45-52" aria-hidden="true" tabindex="-1"></a>You can freely download an appropriate Java version for your machine <span class="co">[</span><span class="ot">here</span><span class="co">](https://www.azul.com/downloads/?package=jdk#zulu)</span>.</span>
+<span id="cb45-53"><a href="#cb45-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-54"><a href="#cb45-54" aria-hidden="true" tabindex="-1"></a><span class="fu">## Installing Spark and setting environment variables</span></span>
+<span id="cb45-55"><a href="#cb45-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-58"><a href="#cb45-58" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-59"><a href="#cb45-59" aria-hidden="true" tabindex="-1"></a><span class="co"># Install and set up Spark environment</span></span>
+<span id="cb45-60"><a href="#cb45-60" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_install</span>(<span class="st">"3.5.5"</span>)  <span class="co"># Install the specific version of Spark (3.5.5)</span></span>
+<span id="cb45-61"><a href="#cb45-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-62"><a href="#cb45-62" aria-hidden="true" tabindex="-1"></a><span class="co"># Set Java and Spark home directory paths</span></span>
+<span id="cb45-63"><a href="#cb45-63" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"JAVA_HOME"</span><span class="ot">=</span><span class="st">"/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home"</span>)  <span class="co"># Set Java home directory for Spark</span></span>
+<span id="cb45-64"><a href="#cb45-64" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"SPARK_HOME"</span><span class="ot">=</span><span class="fu">spark_home_dir</span>(<span class="at">version =</span> <span class="st">"3.5.5"</span>))  <span class="co"># Set Spark home directory</span></span>
+<span id="cb45-65"><a href="#cb45-65" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-66"><a href="#cb45-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-69"><a href="#cb45-69" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-70"><a href="#cb45-70" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
+<span id="cb45-71"><a href="#cb45-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-72"><a href="#cb45-72" aria-hidden="true" tabindex="-1"></a><span class="co"># Define working directory path for file management</span></span>
+<span id="cb45-73"><a href="#cb45-73" aria-hidden="true" tabindex="-1"></a>working_dir <span class="ot">&lt;-</span> <span class="st">"/Users/rodgersiradukunda/Library/CloudStorage/OneDrive-TheUniversityofLiverpool/geospatial_docker"</span></span>
+<span id="cb45-74"><a href="#cb45-74" aria-hidden="true" tabindex="-1"></a><span class="fu">setwd</span>(working_dir)  <span class="co"># Set the working directory</span></span>
+<span id="cb45-75"><a href="#cb45-75" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-76"><a href="#cb45-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-77"><a href="#cb45-77" aria-hidden="true" tabindex="-1"></a><span class="fu">## Configuring Spark</span></span>
+<span id="cb45-78"><a href="#cb45-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-79"><a href="#cb45-79" aria-hidden="true" tabindex="-1"></a>We shall now create a folder where Spark will store temporary files. By default, Spark stores these files in memory, but in our case, we want them to be stored on disk. This is why we specify a <span class="in">`spark_dir`</span> path to direct Spark to use disk storage for its temporary file storage.</span>
+<span id="cb45-80"><a href="#cb45-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-83"><a href="#cb45-83" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-84"><a href="#cb45-84" aria-hidden="true" tabindex="-1"></a><span class="co"># Define path for Spark data</span></span>
+<span id="cb45-85"><a href="#cb45-85" aria-hidden="true" tabindex="-1"></a>spark_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"spark"</span>)</span>
+<span id="cb45-86"><a href="#cb45-86" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-87"><a href="#cb45-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-88"><a href="#cb45-88" aria-hidden="true" tabindex="-1"></a>We now initialise a list and provide configuration settings for Spark. This is arguably one of the most important steps, as it determines both how fast your data is processed and whether it is successfully processed. A typical Spark process involves reading data from files (for instance), processing it, transmitting it between executors, and then writing it back to files. All of this is made possible by **serialising and deserialising** the data into bytes. Naturally, your choice of serializer will heavily influence the performance of your application. Here, we use **Kryo serialisation**, as it is *"significantly faster and more compact than Java serialisation"* (<span class="co">[</span><span class="ot">source</span><span class="co">](https://spark.apache.org/docs/latest/tuning.html)</span>).</span>
+<span id="cb45-89"><a href="#cb45-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-90"><a href="#cb45-90" aria-hidden="true" tabindex="-1"></a>Spark runs on the **Java Virtual Machine (JVM)**, and **Java heap space** refers to the memory allocated to the JVM during runtime for storing objects and data. The heap memory is divided into **Spark memory (M)**, **reserved memory**, and **user memory**. Spark memory itself is divided into two parts: **execution** and **storage (R)**. Execution memory is used for computations such as shuffles, joins, sorts, and aggregations. Storage memory, on the other hand, is used for caching and propagating internal data across the cluster (when running in cluster mode). Read more about this <span class="co">[</span><span class="ot">here</span><span class="co">](https://spark.apache.org/docs/latest/tuning.html)</span>.</span>
+<span id="cb45-91"><a href="#cb45-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-92"><a href="#cb45-92" aria-hidden="true" tabindex="-1"></a>In our case, since we are running our code in **local mode**, we set the JVM heap space to **10GB** using `sparklyr.shell.driver-memory`. We then allocate **70% of the JVM heap space** to Spark memory (M) using the `spark.memory.fraction` option. This means **7GB** is reserved for both storage and execution. By default, **50% of M** (i.e., **3.5GB**) is reserved for storage (R). Although this can be adjusted using <span class="in">`spark.memory.storageFraction`</span>, we leave it at the default here. Importantly, when no execution memory is needed, R can make use of the entire 7GB.</span>
+<span id="cb45-93"><a href="#cb45-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-94"><a href="#cb45-94" aria-hidden="true" tabindex="-1"></a>Other configuration choices we make include enabling the storage of **2GB of data off-heap** (i.e., outside the JVM) using the settings `spark.memory.offHeap.enabled = "true"` and `spark.memory.offHeap.size = "2g"`. We also instruct Spark **not to write intermediate shuffle data to disk**—to avoid I/O bottlenecks—by setting <span class="in">`spark.sql.shuffle.spill = "false"`</span>.</span>
+<span id="cb45-95"><a href="#cb45-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-96"><a href="#cb45-96" aria-hidden="true" tabindex="-1"></a>To manage memory efficiently, we enable **periodic garbage collection every 60 seconds** with `spark.cleaner.periodicGC.interval = "60s"`, which helps reclaim unused space. Additionally, we set our **maximum partition file size to 200MB**. It is recommended to keep this between **128MB and 200MB**, depending on your dataset size and cluster resources (<span class="co">[</span><span class="ot">source</span><span class="co">](https://www.chaosgenius.io/blog/spark-performance-tuning/)</span>).</span>
+<span id="cb45-97"><a href="#cb45-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-98"><a href="#cb45-98" aria-hidden="true" tabindex="-1"></a>Finally, we enable **Adaptive Query Execution (AQE)**, which allows Spark to automatically optimise query plans during runtime, such as when performing joins, thereby improving performance without manual interference (<span class="co">[</span><span class="ot">source</span><span class="co">](https://www.databricks.com/blog/2020/05/29/adaptive-query-execution-speeding-up-spark-sql-at-runtime.html)</span>).</span>
+<span id="cb45-99"><a href="#cb45-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-100"><a href="#cb45-100" aria-hidden="true" tabindex="-1"></a>Please update the configuration settings based on your available RAM.</span>
+<span id="cb45-101"><a href="#cb45-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-104"><a href="#cb45-104" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-105"><a href="#cb45-105" aria-hidden="true" tabindex="-1"></a><span class="co"># Create an empty list for Spark configuration settings</span></span>
+<span id="cb45-106"><a href="#cb45-106" aria-hidden="true" tabindex="-1"></a>config <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb45-107"><a href="#cb45-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-108"><a href="#cb45-108" aria-hidden="true" tabindex="-1"></a><span class="co"># Set Spark configurations for memory and performance optimisation</span></span>
+<span id="cb45-109"><a href="#cb45-109" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-110"><a href="#cb45-110" aria-hidden="true" tabindex="-1"></a><span class="co"># Use KryoSerializer for better performance</span></span>
+<span id="cb45-111"><a href="#cb45-111" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.serializer <span class="ot">&lt;-</span> <span class="st">"org.apache.spark.serializer.KryoSerializer"</span>  </span>
+<span id="cb45-112"><a href="#cb45-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-113"><a href="#cb45-113" aria-hidden="true" tabindex="-1"></a><span class="co"># Set temporary directory for Spark</span></span>
+<span id="cb45-114"><a href="#cb45-114" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"-Djava.io.tmpdir="</span>, spark_dir)  </span>
+<span id="cb45-115"><a href="#cb45-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-116"><a href="#cb45-116" aria-hidden="true" tabindex="-1"></a><span class="co"># Use compressed Oops for JVM performance</span></span>
+<span id="cb45-117"><a href="#cb45-117" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">"-XX:+UseCompressedOops"</span>  </span>
+<span id="cb45-118"><a href="#cb45-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-119"><a href="#cb45-119" aria-hidden="true" tabindex="-1"></a><span class="co"># Allocate 10GB of memory for the Spark driver</span></span>
+<span id="cb45-120"><a href="#cb45-120" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-memory</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">'10G'</span>  </span>
+<span id="cb45-121"><a href="#cb45-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-122"><a href="#cb45-122" aria-hidden="true" tabindex="-1"></a><span class="co"># Set fraction of heap memory used for Spark storage</span></span>
+<span id="cb45-123"><a href="#cb45-123" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.fraction <span class="ot">&lt;-</span> <span class="fl">0.7</span>  </span>
+<span id="cb45-124"><a href="#cb45-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-125"><a href="#cb45-125" aria-hidden="true" tabindex="-1"></a><span class="co"># Set shuffle partitions (local setting based on workload)</span></span>
+<span id="cb45-126"><a href="#cb45-126" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.partitions.local <span class="ot">&lt;-</span> <span class="dv">24</span>  </span>
+<span id="cb45-127"><a href="#cb45-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-128"><a href="#cb45-128" aria-hidden="true" tabindex="-1"></a><span class="co"># Set extra memory for driver</span></span>
+<span id="cb45-129"><a href="#cb45-129" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.driver.extraJavaOptions <span class="ot">&lt;-</span> <span class="st">"-Xmx1G"</span>  </span>
+<span id="cb45-130"><a href="#cb45-130" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-131"><a href="#cb45-131" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable off-heap memory usage</span></span>
+<span id="cb45-132"><a href="#cb45-132" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span> </span>
+<span id="cb45-133"><a href="#cb45-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-134"><a href="#cb45-134" aria-hidden="true" tabindex="-1"></a><span class="co"># Set 4GB for off-heap memory</span></span>
+<span id="cb45-135"><a href="#cb45-135" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.size <span class="ot">&lt;-</span> <span class="st">"2g"</span>  </span>
+<span id="cb45-136"><a href="#cb45-136" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-137"><a href="#cb45-137" aria-hidden="true" tabindex="-1"></a><span class="co"># Disable shuffle spill to disk</span></span>
+<span id="cb45-138"><a href="#cb45-138" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.spill <span class="ot">&lt;-</span> <span class="st">"false"</span>  </span>
+<span id="cb45-139"><a href="#cb45-139" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-140"><a href="#cb45-140" aria-hidden="true" tabindex="-1"></a><span class="co"># Periodic garbage collection interval</span></span>
+<span id="cb45-141"><a href="#cb45-141" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.cleaner.periodicGC.interval <span class="ot">&lt;-</span> <span class="st">"60s"</span>  </span>
+<span id="cb45-142"><a href="#cb45-142" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-143"><a href="#cb45-143" aria-hidden="true" tabindex="-1"></a><span class="co"># Set max partition size for shuffle files</span></span>
+<span id="cb45-144"><a href="#cb45-144" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.files.maxPartitionBytes <span class="ot">&lt;-</span> <span class="st">"200m"</span>  </span>
+<span id="cb45-145"><a href="#cb45-145" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-146"><a href="#cb45-146" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable adaptive query execution</span></span>
+<span id="cb45-147"><a href="#cb45-147" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.adaptive.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span>  </span>
+<span id="cb45-148"><a href="#cb45-148" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-149"><a href="#cb45-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-150"><a href="#cb45-150" aria-hidden="true" tabindex="-1"></a>After configuring our setup, we now connect to Spark. Note that we have also instructed Spark to install the **Delta** package. This is a necessary step if you want to read from or write to Delta tables, which are commonly used for managing large-scale data with <span class="co">[</span><span class="ot">ACID transaction</span><span class="co">](https://docs.databricks.com/aws/en/lakehouse/acid)</span> support among many other advantages.</span>
+<span id="cb45-151"><a href="#cb45-151" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-154"><a href="#cb45-154" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-155"><a href="#cb45-155" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect to Spark with the specified configurations</span></span>
+<span id="cb45-156"><a href="#cb45-156" aria-hidden="true" tabindex="-1"></a>sc <span class="ot">&lt;-</span> <span class="fu">spark_connect</span>(</span>
+<span id="cb45-157"><a href="#cb45-157" aria-hidden="true" tabindex="-1"></a>  <span class="at">master =</span> <span class="st">"local[*]"</span>,  <span class="co"># Use all available cores for local execution</span></span>
+<span id="cb45-158"><a href="#cb45-158" aria-hidden="true" tabindex="-1"></a>  <span class="at">config =</span> config,      <span class="co"># Use the specified configurations</span></span>
+<span id="cb45-159"><a href="#cb45-159" aria-hidden="true" tabindex="-1"></a>  <span class="at">packages =</span> <span class="st">"delta"</span>    <span class="co"># Install the Delta Lake package for optimised storage</span></span>
+<span id="cb45-160"><a href="#cb45-160" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb45-161"><a href="#cb45-161" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-162"><a href="#cb45-162" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-163"><a href="#cb45-163" aria-hidden="true" tabindex="-1"></a>I recommend using the **Spark Web User Interface (UI)** to track metrics associated with your Spark application. You can access it as shown below.</span>
+<span id="cb45-164"><a href="#cb45-164" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-167"><a href="#cb45-167" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-168"><a href="#cb45-168" aria-hidden="true" tabindex="-1"></a><span class="co"># Open Spark web UI for monitoring the connection</span></span>
+<span id="cb45-169"><a href="#cb45-169" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_web</span>(sc)</span>
+<span id="cb45-170"><a href="#cb45-170" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-171"><a href="#cb45-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-172"><a href="#cb45-172" aria-hidden="true" tabindex="-1"></a>After successfully setting up a Spark context, we now turn to loading our data. We start by specifying the path where the files are located. Note that we are instructing Spark to read all CSV files within the <span class="in">`yellow_tripdata2`</span> subfolder.</span>
+<span id="cb45-173"><a href="#cb45-173" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-174"><a href="#cb45-174" aria-hidden="true" tabindex="-1"></a>Additionally, we organise our data into **24 partitions**. We chose 24 because it is **three times the number of our total cores (8)**. This approach helps ensure parallelism during processing and prevents data skew, which could otherwise slow down our computations.</span>
+<span id="cb45-175"><a href="#cb45-175" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-176"><a href="#cb45-176" aria-hidden="true" tabindex="-1"></a><span class="fu">## Loading the data</span></span>
+<span id="cb45-177"><a href="#cb45-177" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-180"><a href="#cb45-180" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-181"><a href="#cb45-181" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the path for the yellow cab data</span></span>
+<span id="cb45-182"><a href="#cb45-182" aria-hidden="true" tabindex="-1"></a>yellow_cab_parent_folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"yellow_tripdata2"</span>)</span>
+<span id="cb45-183"><a href="#cb45-183" aria-hidden="true" tabindex="-1"></a>yellow_cab_filepattern <span class="ot">&lt;-</span> <span class="fu">file.path</span>(yellow_cab_parent_folder, <span class="st">"*csv"</span>)</span>
+<span id="cb45-184"><a href="#cb45-184" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-185"><a href="#cb45-185" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the yellow cab data from CSV files into a Spark DataFrame</span></span>
+<span id="cb45-186"><a href="#cb45-186" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> <span class="fu">spark_read_csv</span>(</span>
+<span id="cb45-187"><a href="#cb45-187" aria-hidden="true" tabindex="-1"></a>  sc, </span>
+<span id="cb45-188"><a href="#cb45-188" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> yellow_cab_filepattern, </span>
+<span id="cb45-189"><a href="#cb45-189" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"yellow_cab_sdf"</span></span>
+<span id="cb45-190"><a href="#cb45-190" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
+<span id="cb45-191"><a href="#cb45-191" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sdf_repartition</span>(<span class="dv">24</span>)</span>
+<span id="cb45-192"><a href="#cb45-192" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-193"><a href="#cb45-193" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the structure of the DataFrame for inspection</span></span>
+<span id="cb45-194"><a href="#cb45-194" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(yellow_cab_sdf, <span class="at">width =</span> <span class="cn">Inf</span>)</span>
+<span id="cb45-195"><a href="#cb45-195" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-196"><a href="#cb45-196" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-197"><a href="#cb45-197" aria-hidden="true" tabindex="-1"></a>Looking at the number of partitions, we see that each core will be responsible for approximately an equal number of rows for each task. This ensures that all cores are doing an equal amount of work, without any being overworked.</span>
+<span id="cb45-198"><a href="#cb45-198" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-201"><a href="#cb45-201" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-202"><a href="#cb45-202" aria-hidden="true" tabindex="-1"></a><span class="co"># Number of rows per each partition</span></span>
+<span id="cb45-203"><a href="#cb45-203" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="sc">%&gt;%</span> </span>
+<span id="cb45-204"><a href="#cb45-204" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sdf_partition_sizes</span>()</span>
+<span id="cb45-205"><a href="#cb45-205" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-206"><a href="#cb45-206" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-207"><a href="#cb45-207" aria-hidden="true" tabindex="-1"></a>Below we can see how many columns and rows our data has.</span>
+<span id="cb45-208"><a href="#cb45-208" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-211"><a href="#cb45-211" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-212"><a href="#cb45-212" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the number of rows and columns in the DataFrame</span></span>
+<span id="cb45-213"><a href="#cb45-213" aria-hidden="true" tabindex="-1"></a><span class="fu">sdf_ncol</span>(yellow_cab_sdf)</span>
+<span id="cb45-214"><a href="#cb45-214" aria-hidden="true" tabindex="-1"></a><span class="fu">sdf_nrow</span>(yellow_cab_sdf)</span>
+<span id="cb45-215"><a href="#cb45-215" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-216"><a href="#cb45-216" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-217"><a href="#cb45-217" aria-hidden="true" tabindex="-1"></a><span class="fu">## Preprocessing</span></span>
+<span id="cb45-218"><a href="#cb45-218" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-219"><a href="#cb45-219" aria-hidden="true" tabindex="-1"></a><span class="fu">### Updating the schema</span></span>
+<span id="cb45-220"><a href="#cb45-220" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-221"><a href="#cb45-221" aria-hidden="true" tabindex="-1"></a>Looking at the schema of our data, we can see that all the variables are in character format. This is not ideal, both for processing and memory allocation, as strings take up a significant amount of space.</span>
+<span id="cb45-222"><a href="#cb45-222" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-225"><a href="#cb45-225" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-226"><a href="#cb45-226" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb45-227"><a href="#cb45-227" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-228"><a href="#cb45-228" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the schema (column types) of the DataFrame</span></span>
+<span id="cb45-229"><a href="#cb45-229" aria-hidden="true" tabindex="-1"></a><span class="fu">sdf_schema</span>(yellow_cab_sdf)</span>
+<span id="cb45-230"><a href="#cb45-230" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-231"><a href="#cb45-231" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-232"><a href="#cb45-232" aria-hidden="true" tabindex="-1"></a>We shall, therefore, update the schema accordingly.</span>
+<span id="cb45-233"><a href="#cb45-233" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-236"><a href="#cb45-236" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-237"><a href="#cb45-237" aria-hidden="true" tabindex="-1"></a><span class="co"># Data cleaning: Convert columns to appropriate types and handle missing values</span></span>
+<span id="cb45-238"><a href="#cb45-238" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">|&gt;</span></span>
+<span id="cb45-239"><a href="#cb45-239" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb45-240"><a href="#cb45-240" aria-hidden="true" tabindex="-1"></a>    <span class="at">VendorID =</span> <span class="fu">as.integer</span>(VendorID),  <span class="co"># Convert VendorID to integer</span></span>
+<span id="cb45-241"><a href="#cb45-241" aria-hidden="true" tabindex="-1"></a>    <span class="at">tpep_pickup_datetime =</span> <span class="fu">to_timestamp</span>(tpep_pickup_datetime),  <span class="co"># Convert to timestamp</span></span>
+<span id="cb45-242"><a href="#cb45-242" aria-hidden="true" tabindex="-1"></a>    <span class="at">tpep_dropoff_datetime =</span> <span class="fu">to_timestamp</span>(tpep_dropoff_datetime),  <span class="co"># Convert to timestamp</span></span>
+<span id="cb45-243"><a href="#cb45-243" aria-hidden="true" tabindex="-1"></a>    <span class="at">passenger_count =</span> <span class="fu">as.integer</span>(passenger_count),  <span class="co"># Convert to integer</span></span>
+<span id="cb45-244"><a href="#cb45-244" aria-hidden="true" tabindex="-1"></a>    <span class="at">trip_distance =</span> <span class="fu">as.numeric</span>(trip_distance),  <span class="co"># Convert to numeric</span></span>
+<span id="cb45-245"><a href="#cb45-245" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_longitude =</span> <span class="fu">as.numeric</span>(pickup_longitude),  <span class="co"># Convert to numeric</span></span>
+<span id="cb45-246"><a href="#cb45-246" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_latitude =</span> <span class="fu">as.numeric</span>(pickup_latitude),  <span class="co"># Convert to numeric</span></span>
+<span id="cb45-247"><a href="#cb45-247" aria-hidden="true" tabindex="-1"></a>    <span class="at">RateCodeID =</span> <span class="fu">as.character</span>(RateCodeID),  <span class="co"># Convert to character</span></span>
+<span id="cb45-248"><a href="#cb45-248" aria-hidden="true" tabindex="-1"></a>    <span class="at">store_and_fwd_flag =</span> <span class="fu">as.character</span>(store_and_fwd_flag),  <span class="co"># Convert to character</span></span>
+<span id="cb45-249"><a href="#cb45-249" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_longitude =</span> <span class="fu">as.numeric</span>(dropoff_longitude),  <span class="co"># Convert to numeric</span></span>
+<span id="cb45-250"><a href="#cb45-250" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_latitude =</span> <span class="fu">as.numeric</span>(dropoff_latitude),  <span class="co"># Convert to numeric</span></span>
+<span id="cb45-251"><a href="#cb45-251" aria-hidden="true" tabindex="-1"></a>    <span class="at">payment_type =</span> <span class="fu">as.character</span>(payment_type),  <span class="co"># Convert to character</span></span>
+<span id="cb45-252"><a href="#cb45-252" aria-hidden="true" tabindex="-1"></a>    <span class="at">fare_amount =</span> <span class="fu">as.numeric</span>(fare_amount),  <span class="co"># Convert to numeric</span></span>
+<span id="cb45-253"><a href="#cb45-253" aria-hidden="true" tabindex="-1"></a>    <span class="at">extra =</span> <span class="fu">as.numeric</span>(extra),  <span class="co"># Convert to numeric</span></span>
+<span id="cb45-254"><a href="#cb45-254" aria-hidden="true" tabindex="-1"></a>    <span class="at">mta_tax =</span> <span class="fu">as.numeric</span>(mta_tax),  <span class="co"># Convert to numeric</span></span>
+<span id="cb45-255"><a href="#cb45-255" aria-hidden="true" tabindex="-1"></a>    <span class="at">tip_amount =</span> <span class="fu">as.numeric</span>(tip_amount),  <span class="co"># Convert to numeric</span></span>
+<span id="cb45-256"><a href="#cb45-256" aria-hidden="true" tabindex="-1"></a>    <span class="at">tolls_amount =</span> <span class="fu">as.numeric</span>(tolls_amount),  <span class="co"># Convert to numeric</span></span>
+<span id="cb45-257"><a href="#cb45-257" aria-hidden="true" tabindex="-1"></a>    <span class="at">improvement_surcharge =</span> <span class="fu">as.numeric</span>(improvement_surcharge),  <span class="co"># Convert to numeric</span></span>
+<span id="cb45-258"><a href="#cb45-258" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_amount =</span> <span class="fu">as.numeric</span>(total_amount)  <span class="co"># Convert to numeric</span></span>
+<span id="cb45-259"><a href="#cb45-259" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb45-260"><a href="#cb45-260" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-261"><a href="#cb45-261" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-262"><a href="#cb45-262" aria-hidden="true" tabindex="-1"></a><span class="fu">### Missing values</span></span>
+<span id="cb45-263"><a href="#cb45-263" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-264"><a href="#cb45-264" aria-hidden="true" tabindex="-1"></a>We now want to check if we have any missing values. By calling **`collect()`**, we are triggering an **action**. By default, Spark performs **lazy loading**, meaning it does not execute every line of code immediately. The code is only executed when actions are performed, such as **`collect()`** and **`count()`**.</span>
+<span id="cb45-265"><a href="#cb45-265" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-266"><a href="#cb45-266" aria-hidden="true" tabindex="-1"></a>By calling <span class="in">`collect()`</span>, we will change the class of the resulting object into an R dataframe rather than a Spark dataframe.</span>
+<span id="cb45-267"><a href="#cb45-267" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-270"><a href="#cb45-270" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-271"><a href="#cb45-271" aria-hidden="true" tabindex="-1"></a><span class="co"># Handle missing values: Summarise the missing values in each column</span></span>
+<span id="cb45-272"><a href="#cb45-272" aria-hidden="true" tabindex="-1"></a>missing_values_by_col <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">|&gt;</span></span>
+<span id="cb45-273"><a href="#cb45-273" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise_all</span>(<span class="sc">~</span> <span class="fu">sum</span>(<span class="fu">as.integer</span>(<span class="fu">is.na</span>(.)))) <span class="sc">|&gt;</span></span>
+<span id="cb45-274"><a href="#cb45-274" aria-hidden="true" tabindex="-1"></a>  <span class="fu">collect</span>()</span>
+<span id="cb45-275"><a href="#cb45-275" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-276"><a href="#cb45-276" aria-hidden="true" tabindex="-1"></a><span class="co"># Print missing values summary</span></span>
+<span id="cb45-277"><a href="#cb45-277" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(missing_values_by_col, <span class="at">width =</span> <span class="cn">Inf</span>)</span>
+<span id="cb45-278"><a href="#cb45-278" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-279"><a href="#cb45-279" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-282"><a href="#cb45-282" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-283"><a href="#cb45-283" aria-hidden="true" tabindex="-1"></a><span class="co"># print classes of yellow_cab_sdf and missing_values_by_col</span></span>
+<span id="cb45-284"><a href="#cb45-284" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(yellow_cab_sdf <span class="sc">%&gt;%</span> <span class="fu">class</span>())</span>
+<span id="cb45-285"><a href="#cb45-285" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(missing_values_by_col <span class="sc">%&gt;%</span> <span class="fu">class</span>())</span>
+<span id="cb45-286"><a href="#cb45-286" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-287"><a href="#cb45-287" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-288"><a href="#cb45-288" aria-hidden="true" tabindex="-1"></a>We can see that the only column with missing values is **`improvement_surcharge`**. We shall impute the missing data using the median value of the column and create a new column called **`improvement_surcharge_imputed`**.</span>
+<span id="cb45-289"><a href="#cb45-289" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-290"><a href="#cb45-290" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-293"><a href="#cb45-293" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-294"><a href="#cb45-294" aria-hidden="true" tabindex="-1"></a><span class="co"># Impute missing values for specific columns (e.g., "improvement_surcharge")</span></span>
+<span id="cb45-295"><a href="#cb45-295" aria-hidden="true" tabindex="-1"></a>input_cols <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"improvement_surcharge"</span>)</span>
+<span id="cb45-296"><a href="#cb45-296" aria-hidden="true" tabindex="-1"></a>output_cols <span class="ot">&lt;-</span> <span class="fu">paste0</span>(input_cols, <span class="st">"_imputed"</span>)</span>
+<span id="cb45-297"><a href="#cb45-297" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-298"><a href="#cb45-298" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">|&gt;</span></span>
+<span id="cb45-299"><a href="#cb45-299" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ft_imputer</span>(<span class="at">input_cols =</span> input_cols,   <span class="co"># Specify input columns</span></span>
+<span id="cb45-300"><a href="#cb45-300" aria-hidden="true" tabindex="-1"></a>             <span class="at">output_cols =</span> output_cols,  <span class="co"># Specify output columns</span></span>
+<span id="cb45-301"><a href="#cb45-301" aria-hidden="true" tabindex="-1"></a>             <span class="at">strategy =</span> <span class="st">"median"</span>)  <span class="co"># Use median strategy for imputation</span></span>
+<span id="cb45-302"><a href="#cb45-302" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-303"><a href="#cb45-303" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-304"><a href="#cb45-304" aria-hidden="true" tabindex="-1"></a><span class="fu">### Duplicates</span></span>
+<span id="cb45-305"><a href="#cb45-305" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-306"><a href="#cb45-306" aria-hidden="true" tabindex="-1"></a>We shall now **remove duplicates** based on specific columns.</span>
+<span id="cb45-307"><a href="#cb45-307" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-310"><a href="#cb45-310" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-311"><a href="#cb45-311" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove duplicate rows based on specific columns</span></span>
+<span id="cb45-312"><a href="#cb45-312" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> <span class="fu">sdf_drop_duplicates</span>(</span>
+<span id="cb45-313"><a href="#cb45-313" aria-hidden="true" tabindex="-1"></a>  yellow_cab_sdf,</span>
+<span id="cb45-314"><a href="#cb45-314" aria-hidden="true" tabindex="-1"></a>  <span class="at">cols =</span> <span class="fu">c</span>(</span>
+<span id="cb45-315"><a href="#cb45-315" aria-hidden="true" tabindex="-1"></a>    <span class="st">"VendorID"</span>,</span>
+<span id="cb45-316"><a href="#cb45-316" aria-hidden="true" tabindex="-1"></a>    <span class="st">"tpep_pickup_datetime"</span>,</span>
+<span id="cb45-317"><a href="#cb45-317" aria-hidden="true" tabindex="-1"></a>    <span class="st">"tpep_dropoff_datetime"</span>,</span>
+<span id="cb45-318"><a href="#cb45-318" aria-hidden="true" tabindex="-1"></a>    <span class="st">"pickup_longitude"</span>,</span>
+<span id="cb45-319"><a href="#cb45-319" aria-hidden="true" tabindex="-1"></a>    <span class="st">"pickup_latitude"</span>,</span>
+<span id="cb45-320"><a href="#cb45-320" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dropoff_longitude"</span>,</span>
+<span id="cb45-321"><a href="#cb45-321" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dropoff_latitude"</span></span>
+<span id="cb45-322"><a href="#cb45-322" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb45-323"><a href="#cb45-323" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb45-324"><a href="#cb45-324" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-325"><a href="#cb45-325" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-326"><a href="#cb45-326" aria-hidden="true" tabindex="-1"></a><span class="fu">### Outliers</span></span>
+<span id="cb45-327"><a href="#cb45-327" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-328"><a href="#cb45-328" aria-hidden="true" tabindex="-1"></a>We shall also handle **outliers** by filtering out unreasonable values in our dataset.</span>
+<span id="cb45-329"><a href="#cb45-329" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-332"><a href="#cb45-332" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-333"><a href="#cb45-333" aria-hidden="true" tabindex="-1"></a><span class="co"># Handle outliers by filtering unreasonable values in columns</span></span>
+<span id="cb45-334"><a href="#cb45-334" aria-hidden="true" tabindex="-1"></a>summary_stats <span class="ot">&lt;-</span> <span class="fu">sdf_describe</span>(</span>
+<span id="cb45-335"><a href="#cb45-335" aria-hidden="true" tabindex="-1"></a>  yellow_cab_sdf,</span>
+<span id="cb45-336"><a href="#cb45-336" aria-hidden="true" tabindex="-1"></a>  <span class="at">cols =</span> <span class="fu">c</span>(</span>
+<span id="cb45-337"><a href="#cb45-337" aria-hidden="true" tabindex="-1"></a>    <span class="st">"passenger_count"</span>,</span>
+<span id="cb45-338"><a href="#cb45-338" aria-hidden="true" tabindex="-1"></a>    <span class="st">"trip_distance"</span>,</span>
+<span id="cb45-339"><a href="#cb45-339" aria-hidden="true" tabindex="-1"></a>    <span class="st">"fare_amount"</span>,</span>
+<span id="cb45-340"><a href="#cb45-340" aria-hidden="true" tabindex="-1"></a>    <span class="st">"total_amount"</span></span>
+<span id="cb45-341"><a href="#cb45-341" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb45-342"><a href="#cb45-342" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb45-343"><a href="#cb45-343" aria-hidden="true" tabindex="-1"></a>  <span class="fu">collect</span>()</span>
+<span id="cb45-344"><a href="#cb45-344" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-345"><a href="#cb45-345" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(summary_stats, <span class="at">width=</span><span class="cn">Inf</span>)</span>
+<span id="cb45-346"><a href="#cb45-346" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-347"><a href="#cb45-347" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-350"><a href="#cb45-350" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-351"><a href="#cb45-351" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter out outliers based on summary statistics</span></span>
+<span id="cb45-352"><a href="#cb45-352" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">|&gt;</span></span>
+<span id="cb45-353"><a href="#cb45-353" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(fare_amount <span class="sc">&gt;</span> <span class="dv">0</span> <span class="sc">&amp;</span> fare_amount <span class="sc">&lt;=</span> <span class="dv">1000</span>,</span>
+<span id="cb45-354"><a href="#cb45-354" aria-hidden="true" tabindex="-1"></a>         trip_distance <span class="sc">&gt;</span> <span class="dv">0</span> <span class="sc">&amp;</span> trip_distance <span class="sc">&lt;</span> <span class="dv">100</span>)</span>
+<span id="cb45-355"><a href="#cb45-355" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-356"><a href="#cb45-356" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-357"><a href="#cb45-357" aria-hidden="true" tabindex="-1"></a><span class="fu">### Feauture Engineering</span></span>
+<span id="cb45-358"><a href="#cb45-358" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-359"><a href="#cb45-359" aria-hidden="true" tabindex="-1"></a>This is followed by performing **feature engineering**, where we derive certain columns such as the **hour**, **day**, **week**, and **month** of pickup and dropoff. We also derive variables indicating whether the pickup and dropoff occurred on a weekend and whether the pickup was during rush hour.</span>
+<span id="cb45-360"><a href="#cb45-360" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-363"><a href="#cb45-363" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-364"><a href="#cb45-364" aria-hidden="true" tabindex="-1"></a><span class="co"># Feature Engineering: Create new time-based features (pickup and dropoff times)</span></span>
+<span id="cb45-365"><a href="#cb45-365" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">|&gt;</span></span>
+<span id="cb45-366"><a href="#cb45-366" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb45-367"><a href="#cb45-367" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_hour =</span> <span class="fu">hour</span>(tpep_pickup_datetime),  <span class="co"># Hour of the pickup</span></span>
+<span id="cb45-368"><a href="#cb45-368" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_dayofweek =</span> <span class="fu">date_format</span>(tpep_pickup_datetime, <span class="st">"E"</span>),  <span class="co"># Day of the week for pickup</span></span>
+<span id="cb45-369"><a href="#cb45-369" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_week =</span> <span class="fu">weekofyear</span>(tpep_pickup_datetime),  <span class="co"># Week of the year for pickup</span></span>
+<span id="cb45-370"><a href="#cb45-370" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_month =</span> <span class="fu">month</span>(tpep_pickup_datetime),  <span class="co"># Month of pickup</span></span>
+<span id="cb45-371"><a href="#cb45-371" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_hour =</span> <span class="fu">hour</span>(tpep_dropoff_datetime),  <span class="co"># Hour of the dropoff</span></span>
+<span id="cb45-372"><a href="#cb45-372" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_dayofweek =</span> <span class="fu">date_format</span>(tpep_pickup_datetime, <span class="st">"E"</span>),  <span class="co"># Day of the week for dropoff</span></span>
+<span id="cb45-373"><a href="#cb45-373" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_week =</span> <span class="fu">weekofyear</span>(tpep_dropoff_datetime),  <span class="co"># Week of the year for dropoff</span></span>
+<span id="cb45-374"><a href="#cb45-374" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_month =</span> <span class="fu">month</span>(tpep_dropoff_datetime),  <span class="co"># Month of dropoff</span></span>
+<span id="cb45-375"><a href="#cb45-375" aria-hidden="true" tabindex="-1"></a>    <span class="at">is_weekend_pickup =</span> <span class="fu">ifelse</span>(pickup_dayofweek <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Sat"</span>, <span class="st">"Sun"</span>), <span class="dv">1</span>, <span class="dv">0</span>),  <span class="co"># Weekend pickup flag</span></span>
+<span id="cb45-376"><a href="#cb45-376" aria-hidden="true" tabindex="-1"></a>    <span class="at">is_weekend_dropoff =</span> <span class="fu">ifelse</span>(dropoff_dayofweek <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Sat"</span>, <span class="st">"Sun"</span>), <span class="dv">1</span>, <span class="dv">0</span>),  <span class="co"># Weekend dropoff flag</span></span>
+<span id="cb45-377"><a href="#cb45-377" aria-hidden="true" tabindex="-1"></a>    <span class="at">is_rush_hour_pickup =</span> <span class="fu">ifelse</span>(pickup_hour <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">7</span><span class="sc">:</span><span class="dv">9</span>, <span class="dv">16</span><span class="sc">:</span><span class="dv">19</span>), <span class="dv">1</span>, <span class="dv">0</span>)  <span class="co"># Rush hour pickup flag</span></span>
+<span id="cb45-378"><a href="#cb45-378" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb45-379"><a href="#cb45-379" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-380"><a href="#cb45-380" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-381"><a href="#cb45-381" aria-hidden="true" tabindex="-1"></a><span class="fu">### Standardisation</span></span>
+<span id="cb45-382"><a href="#cb45-382" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-383"><a href="#cb45-383" aria-hidden="true" tabindex="-1"></a>We now normalise <span class="in">`trip_distance`</span> and <span class="in">`fare_amount`</span> to standardise our data for modelling.</span>
+<span id="cb45-384"><a href="#cb45-384" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-387"><a href="#cb45-387" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-388"><a href="#cb45-388" aria-hidden="true" tabindex="-1"></a><span class="co"># Normalise features to standardise data for machine learning</span></span>
+<span id="cb45-389"><a href="#cb45-389" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">%&gt;%</span></span>
+<span id="cb45-390"><a href="#cb45-390" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb45-391"><a href="#cb45-391" aria-hidden="true" tabindex="-1"></a>    <span class="at">trip_distance_scaled =</span> (trip_distance <span class="sc">-</span> <span class="fu">mean</span>(trip_distance)) <span class="sc">/</span> <span class="fu">sd</span>(trip_distance),  <span class="co"># Standardise trip distance</span></span>
+<span id="cb45-392"><a href="#cb45-392" aria-hidden="true" tabindex="-1"></a>    <span class="at">fare_amount_scaled =</span> (fare_amount <span class="sc">-</span> <span class="fu">mean</span>(fare_amount)) <span class="sc">/</span> <span class="fu">sd</span>(fare_amount)  <span class="co"># Standardise fare amount</span></span>
+<span id="cb45-393"><a href="#cb45-393" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb45-394"><a href="#cb45-394" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-395"><a href="#cb45-395" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the first 5 rows of the updated data</span></span>
+<span id="cb45-396"><a href="#cb45-396" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(yellow_cab_sdf, <span class="at">n=</span><span class="dv">5</span>, <span class="at">width =</span> <span class="cn">Inf</span>)</span>
+<span id="cb45-397"><a href="#cb45-397" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-398"><a href="#cb45-398" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-399"><a href="#cb45-399" aria-hidden="true" tabindex="-1"></a><span class="fu">## Separating the data</span></span>
+<span id="cb45-400"><a href="#cb45-400" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-401"><a href="#cb45-401" aria-hidden="true" tabindex="-1"></a>At this point, I separate my data into two sets: **location-related data** and other **non-location data**. I do this because the next few steps involve obtaining additional **geospatial variables** solely based on pickup and dropoff coordinates. Instead of working with a dataset containing 20-plus columns, I will now only need four: **`trip_id`**, **`latitude`**, **`longitude`**, and **`is_pickup`**.</span>
+<span id="cb45-402"><a href="#cb45-402" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-403"><a href="#cb45-403" aria-hidden="true" tabindex="-1"></a>The only downside is that I will double the number of rows since pickup and dropoff coordinates for the same trip will now be in separate rows. I justify this decision because the alternative—performing heavy spatial joins twice on the same dataset—is quite resource-intensive. Another alternative would be to save the pickup and dropoff locations in separate datasets. Ultimately, you can make various design decisions based on the resources available to you.</span>
+<span id="cb45-404"><a href="#cb45-404" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-407"><a href="#cb45-407" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-408"><a href="#cb45-408" aria-hidden="true" tabindex="-1"></a><span class="co"># Separate data into two parts: location and trip metadata</span></span>
+<span id="cb45-409"><a href="#cb45-409" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">%&gt;%</span> </span>
+<span id="cb45-410"><a href="#cb45-410" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sdf_with_unique_id</span>(<span class="at">id =</span> <span class="st">"trip_id"</span>)  <span class="co"># Add unique trip ID</span></span>
+<span id="cb45-411"><a href="#cb45-411" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-412"><a href="#cb45-412" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-415"><a href="#cb45-415" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-416"><a href="#cb45-416" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
+<span id="cb45-417"><a href="#cb45-417" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-418"><a href="#cb45-418" aria-hidden="true" tabindex="-1"></a>yellow_cab_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">%&gt;%</span> <span class="fu">filter</span>(trip_id <span class="sc">&gt;=</span> <span class="dv">400</span> <span class="sc">&amp;</span> trip_id <span class="sc">&lt;=</span> <span class="dv">405</span>)</span>
+<span id="cb45-419"><a href="#cb45-419" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-420"><a href="#cb45-420" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-423"><a href="#cb45-423" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-424"><a href="#cb45-424" aria-hidden="true" tabindex="-1"></a><span class="co"># Create separate DataFrames for pickup and dropoff locations</span></span>
+<span id="cb45-425"><a href="#cb45-425" aria-hidden="true" tabindex="-1"></a>pickup_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">%&gt;%</span> </span>
+<span id="cb45-426"><a href="#cb45-426" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(</span>
+<span id="cb45-427"><a href="#cb45-427" aria-hidden="true" tabindex="-1"></a>    trip_id,</span>
+<span id="cb45-428"><a href="#cb45-428" aria-hidden="true" tabindex="-1"></a>    <span class="at">latitude =</span> pickup_latitude,</span>
+<span id="cb45-429"><a href="#cb45-429" aria-hidden="true" tabindex="-1"></a>    <span class="at">longitude =</span> pickup_longitude,</span>
+<span id="cb45-430"><a href="#cb45-430" aria-hidden="true" tabindex="-1"></a>    <span class="at">is_pickup =</span> <span class="dv">1</span>  <span class="co"># Flag for pickup locations</span></span>
+<span id="cb45-431"><a href="#cb45-431" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb45-432"><a href="#cb45-432" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-433"><a href="#cb45-433" aria-hidden="true" tabindex="-1"></a>dropoff_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">%&gt;%</span> </span>
+<span id="cb45-434"><a href="#cb45-434" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(</span>
+<span id="cb45-435"><a href="#cb45-435" aria-hidden="true" tabindex="-1"></a>    trip_id,</span>
+<span id="cb45-436"><a href="#cb45-436" aria-hidden="true" tabindex="-1"></a>    <span class="at">latitude =</span> dropoff_latitude,</span>
+<span id="cb45-437"><a href="#cb45-437" aria-hidden="true" tabindex="-1"></a>    <span class="at">longitude =</span> dropoff_longitude,</span>
+<span id="cb45-438"><a href="#cb45-438" aria-hidden="true" tabindex="-1"></a>    <span class="at">is_pickup =</span> <span class="dv">0</span>  <span class="co"># Flag for dropoff locations</span></span>
+<span id="cb45-439"><a href="#cb45-439" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb45-440"><a href="#cb45-440" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-441"><a href="#cb45-441" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine pickup and dropoff locations into one DataFrame</span></span>
+<span id="cb45-442"><a href="#cb45-442" aria-hidden="true" tabindex="-1"></a>locations_sdf <span class="ot">&lt;-</span> <span class="fu">sdf_bind_rows</span>(</span>
+<span id="cb45-443"><a href="#cb45-443" aria-hidden="true" tabindex="-1"></a>  pickup_sdf,</span>
+<span id="cb45-444"><a href="#cb45-444" aria-hidden="true" tabindex="-1"></a>  dropoff_sdf</span>
+<span id="cb45-445"><a href="#cb45-445" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb45-446"><a href="#cb45-446" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-447"><a href="#cb45-447" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(locations_sdf, <span class="at">width =</span> <span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span>
+<span id="cb45-448"><a href="#cb45-448" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-449"><a href="#cb45-449" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-452"><a href="#cb45-452" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-453"><a href="#cb45-453" aria-hidden="true" tabindex="-1"></a><span class="co"># Create another DataFrame for non-location trip data (excluding coordinates)</span></span>
+<span id="cb45-454"><a href="#cb45-454" aria-hidden="true" tabindex="-1"></a>trip_data_sdf <span class="ot">&lt;-</span> yellow_cab_sdf <span class="sc">%&gt;%</span> </span>
+<span id="cb45-455"><a href="#cb45-455" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb45-456"><a href="#cb45-456" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span><span class="fu">c</span>(pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude)  <span class="co"># Exclude latitude and longitude</span></span>
+<span id="cb45-457"><a href="#cb45-457" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb45-458"><a href="#cb45-458" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-459"><a href="#cb45-459" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(trip_data_sdf, <span class="at">width =</span> <span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span>
+<span id="cb45-460"><a href="#cb45-460" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-461"><a href="#cb45-461" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-462"><a href="#cb45-462" aria-hidden="true" tabindex="-1"></a><span class="fu">## Writing the data</span></span>
+<span id="cb45-463"><a href="#cb45-463" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-464"><a href="#cb45-464" aria-hidden="true" tabindex="-1"></a>Finally, we save the preprocessed data into **Delta Lake**. While we had no choice in determining the format of the initial dataset, we do have a choice in how we write it. Delta Lake is based on Parquet files but comes with additional metadata.</span>
+<span id="cb45-465"><a href="#cb45-465" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-466"><a href="#cb45-466" aria-hidden="true" tabindex="-1"></a>The main difference between Parquet files and CSV files is that Parquet is columnar-based, while CSV is row-based. This offers several advantages to Parquet files, such as faster reading and smaller file sizes. Delta Lake further enhances Parquet files by adding ACID capabilities, among other features. You can find a detailed discussion of the advantages of using Delta tables over Parquet files <span class="co">[</span><span class="ot">here</span><span class="co">](https://delta.io/blog/delta-lake-vs-parquet-comparison/)</span>.</span>
+<span id="cb45-467"><a href="#cb45-467" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-470"><a href="#cb45-470" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-471"><a href="#cb45-471" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb45-472"><a href="#cb45-472" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-473"><a href="#cb45-473" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the location and trip data to disk using Delta Lake format</span></span>
+<span id="cb45-474"><a href="#cb45-474" aria-hidden="true" tabindex="-1"></a>save_file_path_locations_sdf <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"locations_sdf"</span>)</span>
+<span id="cb45-475"><a href="#cb45-475" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
+<span id="cb45-476"><a href="#cb45-476" aria-hidden="true" tabindex="-1"></a>  locations_sdf,</span>
+<span id="cb45-477"><a href="#cb45-477" aria-hidden="true" tabindex="-1"></a>  save_file_path_locations_sdf,</span>
+<span id="cb45-478"><a href="#cb45-478" aria-hidden="true" tabindex="-1"></a>  <span class="at">mode =</span> <span class="st">"overwrite"</span>  <span class="co"># Overwrite existing file if it exists</span></span>
+<span id="cb45-479"><a href="#cb45-479" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb45-480"><a href="#cb45-480" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-481"><a href="#cb45-481" aria-hidden="true" tabindex="-1"></a>save_file_path_trip_data_sdf <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"trip_data_sdf"</span>)</span>
+<span id="cb45-482"><a href="#cb45-482" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
+<span id="cb45-483"><a href="#cb45-483" aria-hidden="true" tabindex="-1"></a>  trip_data_sdf,</span>
+<span id="cb45-484"><a href="#cb45-484" aria-hidden="true" tabindex="-1"></a>  save_file_path_trip_data_sdf,</span>
+<span id="cb45-485"><a href="#cb45-485" aria-hidden="true" tabindex="-1"></a>  <span class="at">mode =</span> <span class="st">"overwrite"</span>  <span class="co"># Overwrite existing file if it exists</span></span>
+<span id="cb45-486"><a href="#cb45-486" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb45-487"><a href="#cb45-487" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb45-488"><a href="#cb45-488" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-489"><a href="#cb45-489" aria-hidden="true" tabindex="-1"></a><span class="fu">## Disconnecting Spark context</span></span>
+<span id="cb45-490"><a href="#cb45-490" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-491"><a href="#cb45-491" aria-hidden="true" tabindex="-1"></a>Finally, we disconnect from our Spark context to release the memory being held by Spark.</span>
+<span id="cb45-492"><a href="#cb45-492" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-495"><a href="#cb45-495" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb45-496"><a href="#cb45-496" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from Spark session</span></span>
+<span id="cb45-497"><a href="#cb45-497" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span>
+<span id="cb45-498"><a href="#cb45-498" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+</code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div></div></div></div></div>
+</div> <!-- /content -->
+
+
+
+
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io/edit/main/preprocessing_one.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer><script src="site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

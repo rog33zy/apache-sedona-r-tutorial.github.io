@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.549">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Apache Sedona R Tutorial - 6&nbsp; Combining Updated Locations Data with Initial Trip Data</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./preprocessing_four.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+
+</head>
+
+<body class="nav-sidebar docked">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./preprocessing_five.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Combining Updated Locations Data with Initial Trip Data</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Apache Sedona R Tutorial</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Processing Large Datasets with Delta Lake, Sparklyr, and Apache Sedona in R</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./preprocessing_one.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Preprocessing and Feature Engineering for Yellow Cab Trip Data</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./preprocessing_two.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Processing Vector Data with Apache Sedona and Sparklyr in R</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./preprocessing_three.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./preprocessing_four.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Part Two - Processing Raster Data with Apache Sedona and Sparklyr in R</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./preprocessing_five.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Combining Updated Locations Data with Initial Trip Data</span></span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">6.1</span> Introduction</a></li>
+  <li><a href="#load-the-datasets" id="toc-load-the-datasets" class="nav-link" data-scroll-target="#load-the-datasets"><span class="header-section-number">6.2</span> Load the datasets</a></li>
+  <li><a href="#joining-the-datasets" id="toc-joining-the-datasets" class="nav-link" data-scroll-target="#joining-the-datasets"><span class="header-section-number">6.3</span> Joining the datasets</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io/edit/main/preprocessing_five.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Combining Updated Locations Data with Initial Trip Data</span></h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="introduction"><span class="header-section-number">6.1</span> Introduction</h2>
+<p>If you recall, we had initially separated location and non-location data so as to gather more location-related data, such as median household income and population density around pickup and dropoff points.</p>
+<p>Having accomplished that, we will now combine the updated locations data with the rest of the trip data.</p>
+<p>This will be the last chapter for me, but please go further — create maps based on this data, and perform machine learning analysis too. You can find <strong>Sparklyr machine learning documentation <a href="https://spark.rstudio.com/guides/machine-learning/">here</a></strong>.</p>
+<p>It has been a joy to come this far, and I hope you have learnt something new throughout this whole tutorial.</p>
+<p><strong>FYI</strong>, because we are not using Apache Sedona in this part, we are using the same Spark configuration as that used in Chapter One.</p>
+<p>Anyhow, <strong>let us get to work!</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load required libraries</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sparklyr)   <span class="co"># Spark connection and data manipulation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'sparklyr'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:stats':
+
+    filter</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)      <span class="co"># Data manipulation functions</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'dplyr'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:stats':
+
+    filter, lag</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install and set up Spark environment</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_install</span>(<span class="st">"3.5.5"</span>)  <span class="co"># Install the specific version of Spark (3.5.5)</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Set Java and Spark home directory paths</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"JAVA_HOME"</span><span class="ot">=</span><span class="st">"/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home"</span>)  <span class="co"># Set Java home directory for Spark</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"SPARK_HOME"</span><span class="ot">=</span><span class="fu">spark_home_dir</span>(<span class="at">version =</span> <span class="st">"3.5.5"</span>))  <span class="co"># Set Spark home directory</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Define working directory path for file management</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>working_dir <span class="ot">&lt;-</span> <span class="st">"/Users/rodgersiradukunda/Library/CloudStorage/OneDrive-TheUniversityofLiverpool/geospatial_docker"</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="fu">setwd</span>(working_dir)  <span class="co"># Set the working directory</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Define path for Spark data</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>spark_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"spark"</span>)</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Create an empty list for Spark configuration settings</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>config <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Set Spark configurations for memory and performance optimisation</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"-Djava.io.tmpdir="</span>, spark_dir)  <span class="co"># Set temporary directory for Spark</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">"-XX:+UseCompressedOops"</span>  <span class="co"># Use compressed Oops for JVM performance</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-memory</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">'10G'</span>  <span class="co"># Allocate 8GB of memory for the Spark driver</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.fraction <span class="ot">&lt;-</span> <span class="fl">0.7</span>  <span class="co"># Set fraction of heap memory used for Spark storage</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.partitions.local <span class="ot">&lt;-</span> <span class="dv">24</span>  <span class="co"># Set shuffle partitions (local setting based on workload)</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.driver.extraJavaOptions <span class="ot">&lt;-</span> <span class="st">"-Xmx8G"</span>  <span class="co"># Set extra memory for driver</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.serializer <span class="ot">&lt;-</span> <span class="st">"org.apache.spark.serializer.KryoSerializer"</span>  <span class="co"># Use KryoSerializer for better performance</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span>  <span class="co"># Enable off-heap memory usage</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.size <span class="ot">&lt;-</span> <span class="st">"4g"</span>  <span class="co"># Set 4GB for off-heap memory</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.spill <span class="ot">&lt;-</span> <span class="st">"false"</span>  <span class="co"># Disable shuffle spill to disk</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.cleaner.periodicGC.interval <span class="ot">&lt;-</span> <span class="st">"60s"</span>  <span class="co"># Periodic garbage collection interval</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.files.maxPartitionBytes <span class="ot">&lt;-</span> <span class="st">"200m"</span>  <span class="co"># Set max partition size for shuffle files</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.adaptive.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span>  <span class="co"># Enable adaptive query execution</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect to Spark with the specified configurations</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>sc <span class="ot">&lt;-</span> <span class="fu">spark_connect</span>(</span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>  <span class="at">master =</span> <span class="st">"local[*]"</span>,  <span class="co"># Use all available cores for local execution</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>  <span class="at">config =</span> config,      <span class="co"># Use the specified configurations</span></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>  <span class="at">packages =</span> <span class="st">"delta"</span>    <span class="co"># Install the Delta Lake package for optimised storage</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Open Spark web UI for monitoring the connection</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_web</span>(sc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="load-the-datasets" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="load-the-datasets"><span class="header-section-number">6.2</span> Load the datasets</h2>
+<p>We start by loading the datasets.</p>
+<p>As you can see below, in addition to <strong>partitioning the data into 24 parts</strong>, we also <strong>specify the column to partition by</strong>, and use <strong>trip_id</strong> which is common to both datasets.</p>
+<p>This is because we shall later join the datasets based on this column, and we want <strong>rows with the same trip_id to be in the same partitions</strong> so as to <strong>minimise shuffling of data</strong>, which is quite computationally intensive.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read locations dataset in Delta format and register as a SQL view for querying</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_three <span class="ot">&lt;-</span> <span class="fu">spark_read_delta</span>(</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"locations_sdf_updated_three"</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span> </span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(trip_id <span class="sc">&gt;=</span> <span class="dv">40000000</span> <span class="sc">&amp;</span> trip_id <span class="sc">&lt;=</span> <span class="dv">40000010</span>) <span class="sc">%&gt;%</span> <span class="co"># filter for only ten rows </span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sdf_register</span>(<span class="st">"locations_sdf_updated_three_view"</span>)  <span class="co"># Register as view for SQL queries</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Read trip data in Delta format and register as a SQL view</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>trip_data_sdf <span class="ot">&lt;-</span> <span class="fu">spark_read_delta</span>(</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"trip_data_sdf"</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span> </span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(trip_id <span class="sc">&gt;</span> <span class="dv">40000000</span>) <span class="sc">%&gt;%</span>  <span class="co"># Optional filtering</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sdf_repartition</span>(<span class="at">partitions =</span> <span class="dv">24</span>, <span class="at">partition_by =</span> <span class="st">"trip_id"</span>) <span class="sc">%&gt;%</span>  <span class="co"># Repartition for optimal join performance</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sdf_register</span>(<span class="st">"trip_data_sdf"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Just a refresher on how these datasets look.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(locations_sdf_updated_three, <span class="at">width=</span><span class="cn">Inf</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Source:   table&lt;`locations_sdf_updated_three_view`&gt; [?? x 11]
+# Database: spark_connection
+    trip_id latitude longitude is_pickup BoroName  NTA2020
+      &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;chr&gt;     &lt;chr&gt;  
+ 1 40000009     40.7     -74.0         1 Manhattan MN0603 
+ 2 40000006     40.8     -74.0         1 Manhattan MN0604 
+ 3 40000007     40.7     -74.0         0 Manhattan MN0501 
+ 4 40000005     40.8     -74.0         1 Manhattan MN0502 
+ 5 40000006     40.8     -74.0         0 Manhattan MN0801 
+ 6 40000004     40.7     -74.0         1 Manhattan MN0401 
+ 7 40000002     40.7     -74.0         0 Manhattan MN0202 
+ 8 40000004     40.7     -74.0         0 Manhattan MN0501 
+ 9 40000003     40.7     -74.0         0 Manhattan MN0501 
+10 40000007     40.8     -74.0         1 Manhattan MN0603 
+   NTAName                                     MdHHIncE pop_density lcz_class
+   &lt;chr&gt;                                          &lt;int&gt;       &lt;dbl&gt;     &lt;int&gt;
+ 1 Murray Hill-Kips Bay                          138337      44076.         1
+ 2 East Midtown-Turtle Bay                       161934      41235.         1
+ 3 Midtown South-Flatiron-Union Square           167458      29773.         1
+ 4 Midtown-Times Square                          153871       4928.         1
+ 5 Upper East Side-Lenox Hill-Roosevelt Island   133349      21597.         1
+ 6 Chelsea-Hudson Yards                          118915      37489.         2
+ 7 Greenwich Village                             175436      31734.         2
+ 8 Midtown South-Flatiron-Union Square           167458      29773.         2
+ 9 Midtown South-Flatiron-Union Square           167458      15877.         1
+10 Murray Hill-Kips Bay                          138337      20680.         1
+   lcz_label       
+   &lt;chr&gt;           
+ 1 Compact highrise
+ 2 Compact highrise
+ 3 Compact highrise
+ 4 Compact highrise
+ 5 Compact highrise
+ 6 Compact midrise 
+ 7 Compact midrise 
+ 8 Compact midrise 
+ 9 Compact highrise
+10 Compact highrise
+# ℹ more rows</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(trip_data_sdf, <span class="at">width=</span><span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Source:   table&lt;`trip_data_sdf`&gt; [?? x 30]
+# Database: spark_connection
+   VendorID tpep_pickup_datetime tpep_dropoff_datetime passenger_count
+      &lt;int&gt; &lt;dttm&gt;               &lt;dttm&gt;                          &lt;int&gt;
+ 1        1 2016-01-25 11:17:40  2016-01-25 11:25:12                 1
+ 2        1 2016-01-25 11:22:58  2016-01-25 11:27:02                 1
+ 3        1 2016-01-25 11:26:04  2016-01-25 11:36:49                 1
+ 4        1 2016-01-25 11:23:03  2016-01-25 11:43:07                 1
+ 5        1 2016-01-25 11:26:02  2016-01-25 11:43:07                 1
+ 6        1 2016-01-25 11:29:33  2016-01-25 11:47:02                 1
+ 7        1 2016-01-25 11:38:11  2016-01-25 11:50:29                 1
+ 8        2 2016-01-25 11:34:26  2016-01-25 11:55:53                 1
+ 9        2 2016-01-25 11:48:14  2016-01-25 11:56:11                 3
+10        2 2016-01-25 11:37:59  2016-01-25 11:57:48                 1
+   trip_distance RateCodeID store_and_fwd_flag payment_type fare_amount extra
+           &lt;dbl&gt; &lt;chr&gt;      &lt;chr&gt;              &lt;chr&gt;              &lt;dbl&gt; &lt;dbl&gt;
+ 1          0.6  1          N                  1                    6.5     0
+ 2          0.8  1          N                  2                    5       0
+ 3          1.2  1          N                  1                    8.5     0
+ 4          2.3  1          N                  1                   13.5     0
+ 5          1.9  1          N                  2                   12       0
+ 6          1.7  1          N                  2                   12       0
+ 7          1.5  1          N                  1                    9.5     0
+ 8          4.04 1          N                  1                   18       0
+ 9          1.19 1          N                  1                    7       0
+10          1.36 1          N                  2                   13       0
+   mta_tax tip_amount tolls_amount improvement_surcharge total_amount
+     &lt;dbl&gt;      &lt;dbl&gt;        &lt;dbl&gt;                 &lt;dbl&gt;        &lt;dbl&gt;
+ 1     0.5       1.45            0                   0.3         8.75
+ 2     0.5       0               0                   0.3         5.8 
+ 3     0.5       1.85            0                   0.3        11.2 
+ 4     0.5       2.86            0                   0.3        17.2 
+ 5     0.5       0               0                   0.3        12.8 
+ 6     0.5       0               0                   0.3        12.8 
+ 7     0.5       1.5             0                   0.3        11.8 
+ 8     0.5       3.76            0                   0.3        22.6 
+ 9     0.5       1.56            0                   0.3         9.36
+10     0.5       0               0                   0.3        13.8 
+   improvement_surcharge_imputed pickup_hour pickup_dayofweek pickup_week
+                           &lt;dbl&gt;       &lt;int&gt; &lt;chr&gt;                  &lt;int&gt;
+ 1                           0.3          11 Mon                        4
+ 2                           0.3          11 Mon                        4
+ 3                           0.3          11 Mon                        4
+ 4                           0.3          11 Mon                        4
+ 5                           0.3          11 Mon                        4
+ 6                           0.3          11 Mon                        4
+ 7                           0.3          11 Mon                        4
+ 8                           0.3          11 Mon                        4
+ 9                           0.3          11 Mon                        4
+10                           0.3          11 Mon                        4
+   pickup_month dropoff_hour dropoff_dayofweek dropoff_week dropoff_month
+          &lt;int&gt;        &lt;int&gt; &lt;chr&gt;                    &lt;int&gt;         &lt;int&gt;
+ 1            1           11 Mon                          4             1
+ 2            1           11 Mon                          4             1
+ 3            1           11 Mon                          4             1
+ 4            1           11 Mon                          4             1
+ 5            1           11 Mon                          4             1
+ 6            1           11 Mon                          4             1
+ 7            1           11 Mon                          4             1
+ 8            1           11 Mon                          4             1
+ 9            1           11 Mon                          4             1
+10            1           11 Mon                          4             1
+   is_weekend_pickup is_weekend_dropoff is_rush_hour_pickup trip_distance_scaled
+               &lt;dbl&gt;              &lt;dbl&gt;               &lt;dbl&gt;                &lt;dbl&gt;
+ 1                 0                  0                   0               -0.648
+ 2                 0                  0                   0               -0.591
+ 3                 0                  0                   0               -0.478
+ 4                 0                  0                   0               -0.166
+ 5                 0                  0                   0               -0.280
+ 6                 0                  0                   0               -0.336
+ 7                 0                  0                   0               -0.393
+ 8                 0                  0                   0                0.327
+ 9                 0                  0                   0               -0.481
+10                 0                  0                   0               -0.433
+   fare_amount_scaled  trip_id
+                &lt;dbl&gt;    &lt;dbl&gt;
+ 1            -0.567  40000002
+ 2            -0.713  40000022
+ 3            -0.373  40000097
+ 4             0.114  40000128
+ 5            -0.0319 40000129
+ 6            -0.0319 40000167
+ 7            -0.275  40000198
+ 8             0.552  40000238
+ 9            -0.519  40000240
+10             0.0655 40000260
+# ℹ more rows</code></pre>
+</div>
+</div>
+</section>
+<section id="joining-the-datasets" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="joining-the-datasets"><span class="header-section-number">6.3</span> Joining the datasets</h2>
+<p>We start by joining the non-location data with the pickup location data, renaming certain variables, and dropping others in the process.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Join trip data with pickup locations using trip_id and rename selected columns for clarity</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>merged_one <span class="ot">&lt;-</span> <span class="fu">left_join</span>(</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  trip_data_sdf,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  locations_sdf_updated_three <span class="sc">%&gt;%</span> <span class="fu">filter</span>(is_pickup <span class="sc">==</span> <span class="dv">1</span>),</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">by =</span> <span class="st">"trip_id"</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_borough =</span> BoroName,</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_neighbourhood =</span> NTAName, </span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_neigh_hhincome =</span> MdHHIncE,</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_pop_density =</span> pop_density,</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_lcz_label =</span> lcz_label</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>    trip_id,</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>    VendorID, </span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    tpep_pickup_datetime, </span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    tpep_dropoff_datetime, </span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>    passenger_count,</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>    trip_distance,</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>    pickup_hour,</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>    pickup_dayofweek,</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>    pickup_week,</span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>    pickup_month,</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>    dropoff_hour,</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>    dropoff_dayofweek,</span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>    dropoff_week,</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>    dropoff_month,</span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>    is_weekend_pickup,</span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a>    is_weekend_dropoff,</span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>    is_rush_hour_pickup,</span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>    trip_distance_scaled,</span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a>    pickup_borough,</span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a>    pickup_neighbourhood,</span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a>    pickup_neigh_hhincome,</span>
+<span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a>    pickup_pop_density,</span>
+<span id="cb14-37"><a href="#cb14-37" aria-hidden="true" tabindex="-1"></a>    pickup_lcz_label</span>
+<span id="cb14-38"><a href="#cb14-38" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb14-39"><a href="#cb14-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-40"><a href="#cb14-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the merged pickup-enriched dataset</span></span>
+<span id="cb14-41"><a href="#cb14-41" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(merged_one, <span class="at">width =</span> <span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Source:   SQL [?? x 23]
+# Database: spark_connection
+    trip_id VendorID tpep_pickup_datetime tpep_dropoff_datetime passenger_count
+      &lt;dbl&gt;    &lt;int&gt; &lt;dttm&gt;               &lt;dttm&gt;                          &lt;int&gt;
+ 1 40000002        1 2016-01-25 11:17:40  2016-01-25 11:25:12                 1
+ 2 40000022        1 2016-01-25 11:22:58  2016-01-25 11:27:02                 1
+ 3 40000097        1 2016-01-25 11:26:04  2016-01-25 11:36:49                 1
+ 4 40000128        1 2016-01-25 11:23:03  2016-01-25 11:43:07                 1
+ 5 40000129        1 2016-01-25 11:26:02  2016-01-25 11:43:07                 1
+ 6 40000167        1 2016-01-25 11:29:33  2016-01-25 11:47:02                 1
+ 7 40000198        1 2016-01-25 11:38:11  2016-01-25 11:50:29                 1
+ 8 40000238        2 2016-01-25 11:34:26  2016-01-25 11:55:53                 1
+ 9 40000240        2 2016-01-25 11:48:14  2016-01-25 11:56:11                 3
+10 40000260        2 2016-01-25 11:37:59  2016-01-25 11:57:48                 1
+   trip_distance pickup_hour pickup_dayofweek pickup_week pickup_month
+           &lt;dbl&gt;       &lt;int&gt; &lt;chr&gt;                  &lt;int&gt;        &lt;int&gt;
+ 1          0.6           11 Mon                        4            1
+ 2          0.8           11 Mon                        4            1
+ 3          1.2           11 Mon                        4            1
+ 4          2.3           11 Mon                        4            1
+ 5          1.9           11 Mon                        4            1
+ 6          1.7           11 Mon                        4            1
+ 7          1.5           11 Mon                        4            1
+ 8          4.04          11 Mon                        4            1
+ 9          1.19          11 Mon                        4            1
+10          1.36          11 Mon                        4            1
+   dropoff_hour dropoff_dayofweek dropoff_week dropoff_month is_weekend_pickup
+          &lt;int&gt; &lt;chr&gt;                    &lt;int&gt;         &lt;int&gt;             &lt;dbl&gt;
+ 1           11 Mon                          4             1                 0
+ 2           11 Mon                          4             1                 0
+ 3           11 Mon                          4             1                 0
+ 4           11 Mon                          4             1                 0
+ 5           11 Mon                          4             1                 0
+ 6           11 Mon                          4             1                 0
+ 7           11 Mon                          4             1                 0
+ 8           11 Mon                          4             1                 0
+ 9           11 Mon                          4             1                 0
+10           11 Mon                          4             1                 0
+   is_weekend_dropoff is_rush_hour_pickup trip_distance_scaled pickup_borough
+                &lt;dbl&gt;               &lt;dbl&gt;                &lt;dbl&gt; &lt;chr&gt;         
+ 1                  0                   0               -0.648 Manhattan     
+ 2                  0                   0               -0.591 &lt;NA&gt;          
+ 3                  0                   0               -0.478 &lt;NA&gt;          
+ 4                  0                   0               -0.166 &lt;NA&gt;          
+ 5                  0                   0               -0.280 &lt;NA&gt;          
+ 6                  0                   0               -0.336 &lt;NA&gt;          
+ 7                  0                   0               -0.393 &lt;NA&gt;          
+ 8                  0                   0                0.327 &lt;NA&gt;          
+ 9                  0                   0               -0.481 &lt;NA&gt;          
+10                  0                   0               -0.433 &lt;NA&gt;          
+   pickup_neighbourhood            pickup_neigh_hhincome pickup_pop_density
+   &lt;chr&gt;                                           &lt;int&gt;              &lt;dbl&gt;
+ 1 SoHo-Little Italy-Hudson Square                133847             14980.
+ 2 &lt;NA&gt;                                               NA                NA 
+ 3 &lt;NA&gt;                                               NA                NA 
+ 4 &lt;NA&gt;                                               NA                NA 
+ 5 &lt;NA&gt;                                               NA                NA 
+ 6 &lt;NA&gt;                                               NA                NA 
+ 7 &lt;NA&gt;                                               NA                NA 
+ 8 &lt;NA&gt;                                               NA                NA 
+ 9 &lt;NA&gt;                                               NA                NA 
+10 &lt;NA&gt;                                               NA                NA 
+   pickup_lcz_label
+   &lt;chr&gt;           
+ 1 Compact midrise 
+ 2 &lt;NA&gt;            
+ 3 &lt;NA&gt;            
+ 4 &lt;NA&gt;            
+ 5 &lt;NA&gt;            
+ 6 &lt;NA&gt;            
+ 7 &lt;NA&gt;            
+ 8 &lt;NA&gt;            
+ 9 &lt;NA&gt;            
+10 &lt;NA&gt;            
+# ℹ more rows</code></pre>
+</div>
+</div>
+<p>We now join our updated data with dropoff location data, again renaming certain variables and dropping others.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Join the merged pickup dataset with dropoff locations and rename/drop unnecessary columns</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>merged_two <span class="ot">&lt;-</span> <span class="fu">left_join</span>(</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  merged_one,</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  locations_sdf_updated_three <span class="sc">%&gt;%</span> <span class="fu">filter</span>(is_pickup <span class="sc">==</span> <span class="dv">0</span>),</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">by =</span> <span class="st">"trip_id"</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span> </span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_borough =</span> BoroName,</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_neighbourhood =</span> NTAName, </span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_neigh_hhincome =</span> MdHHIncE,</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_pop_density =</span> pop_density,</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_lcz_label =</span> lcz_label</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(latitude, longitude, is_pickup, lcz_class))  <span class="co"># Drop redundant columns</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>This is what our final dataset looks like.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the final merged dataset enriched with both pickup and dropoff spatial context</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(merged_two, <span class="at">width =</span> <span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># Source:   SQL [?? x 29]
+# Database: spark_connection
+    trip_id VendorID tpep_pickup_datetime tpep_dropoff_datetime passenger_count
+      &lt;dbl&gt;    &lt;int&gt; &lt;dttm&gt;               &lt;dttm&gt;                          &lt;int&gt;
+ 1 40000002        1 2016-01-25 11:17:40  2016-01-25 11:25:12                 1
+ 2 40000022        1 2016-01-25 11:22:58  2016-01-25 11:27:02                 1
+ 3 40000097        1 2016-01-25 11:26:04  2016-01-25 11:36:49                 1
+ 4 40000128        1 2016-01-25 11:23:03  2016-01-25 11:43:07                 1
+ 5 40000129        1 2016-01-25 11:26:02  2016-01-25 11:43:07                 1
+ 6 40000167        1 2016-01-25 11:29:33  2016-01-25 11:47:02                 1
+ 7 40000198        1 2016-01-25 11:38:11  2016-01-25 11:50:29                 1
+ 8 40000238        2 2016-01-25 11:34:26  2016-01-25 11:55:53                 1
+ 9 40000240        2 2016-01-25 11:48:14  2016-01-25 11:56:11                 3
+10 40000260        2 2016-01-25 11:37:59  2016-01-25 11:57:48                 1
+   trip_distance pickup_hour pickup_dayofweek pickup_week pickup_month
+           &lt;dbl&gt;       &lt;int&gt; &lt;chr&gt;                  &lt;int&gt;        &lt;int&gt;
+ 1          0.6           11 Mon                        4            1
+ 2          0.8           11 Mon                        4            1
+ 3          1.2           11 Mon                        4            1
+ 4          2.3           11 Mon                        4            1
+ 5          1.9           11 Mon                        4            1
+ 6          1.7           11 Mon                        4            1
+ 7          1.5           11 Mon                        4            1
+ 8          4.04          11 Mon                        4            1
+ 9          1.19          11 Mon                        4            1
+10          1.36          11 Mon                        4            1
+   dropoff_hour dropoff_dayofweek dropoff_week dropoff_month is_weekend_pickup
+          &lt;int&gt; &lt;chr&gt;                    &lt;int&gt;         &lt;int&gt;             &lt;dbl&gt;
+ 1           11 Mon                          4             1                 0
+ 2           11 Mon                          4             1                 0
+ 3           11 Mon                          4             1                 0
+ 4           11 Mon                          4             1                 0
+ 5           11 Mon                          4             1                 0
+ 6           11 Mon                          4             1                 0
+ 7           11 Mon                          4             1                 0
+ 8           11 Mon                          4             1                 0
+ 9           11 Mon                          4             1                 0
+10           11 Mon                          4             1                 0
+   is_weekend_dropoff is_rush_hour_pickup trip_distance_scaled pickup_borough
+                &lt;dbl&gt;               &lt;dbl&gt;                &lt;dbl&gt; &lt;chr&gt;         
+ 1                  0                   0               -0.648 Manhattan     
+ 2                  0                   0               -0.591 &lt;NA&gt;          
+ 3                  0                   0               -0.478 &lt;NA&gt;          
+ 4                  0                   0               -0.166 &lt;NA&gt;          
+ 5                  0                   0               -0.280 &lt;NA&gt;          
+ 6                  0                   0               -0.336 &lt;NA&gt;          
+ 7                  0                   0               -0.393 &lt;NA&gt;          
+ 8                  0                   0                0.327 &lt;NA&gt;          
+ 9                  0                   0               -0.481 &lt;NA&gt;          
+10                  0                   0               -0.433 &lt;NA&gt;          
+   pickup_neighbourhood            pickup_neigh_hhincome pickup_pop_density
+   &lt;chr&gt;                                           &lt;int&gt;              &lt;dbl&gt;
+ 1 SoHo-Little Italy-Hudson Square                133847             14980.
+ 2 &lt;NA&gt;                                               NA                NA 
+ 3 &lt;NA&gt;                                               NA                NA 
+ 4 &lt;NA&gt;                                               NA                NA 
+ 5 &lt;NA&gt;                                               NA                NA 
+ 6 &lt;NA&gt;                                               NA                NA 
+ 7 &lt;NA&gt;                                               NA                NA 
+ 8 &lt;NA&gt;                                               NA                NA 
+ 9 &lt;NA&gt;                                               NA                NA 
+10 &lt;NA&gt;                                               NA                NA 
+   pickup_lcz_label dropoff_borough NTA2020 dropoff_neighbourhood
+   &lt;chr&gt;            &lt;chr&gt;           &lt;chr&gt;   &lt;chr&gt;                
+ 1 Compact midrise  Manhattan       MN0202  Greenwich Village    
+ 2 &lt;NA&gt;             &lt;NA&gt;            &lt;NA&gt;    &lt;NA&gt;                 
+ 3 &lt;NA&gt;             &lt;NA&gt;            &lt;NA&gt;    &lt;NA&gt;                 
+ 4 &lt;NA&gt;             &lt;NA&gt;            &lt;NA&gt;    &lt;NA&gt;                 
+ 5 &lt;NA&gt;             &lt;NA&gt;            &lt;NA&gt;    &lt;NA&gt;                 
+ 6 &lt;NA&gt;             &lt;NA&gt;            &lt;NA&gt;    &lt;NA&gt;                 
+ 7 &lt;NA&gt;             &lt;NA&gt;            &lt;NA&gt;    &lt;NA&gt;                 
+ 8 &lt;NA&gt;             &lt;NA&gt;            &lt;NA&gt;    &lt;NA&gt;                 
+ 9 &lt;NA&gt;             &lt;NA&gt;            &lt;NA&gt;    &lt;NA&gt;                 
+10 &lt;NA&gt;             &lt;NA&gt;            &lt;NA&gt;    &lt;NA&gt;                 
+   dropoff_neigh_hhincome dropoff_pop_density dropoff_lcz_label
+                    &lt;int&gt;               &lt;dbl&gt; &lt;chr&gt;            
+ 1                 175436              31734. Compact midrise  
+ 2                     NA                 NA  &lt;NA&gt;             
+ 3                     NA                 NA  &lt;NA&gt;             
+ 4                     NA                 NA  &lt;NA&gt;             
+ 5                     NA                 NA  &lt;NA&gt;             
+ 6                     NA                 NA  &lt;NA&gt;             
+ 7                     NA                 NA  &lt;NA&gt;             
+ 8                     NA                 NA  &lt;NA&gt;             
+ 9                     NA                 NA  &lt;NA&gt;             
+10                     NA                 NA  &lt;NA&gt;             
+# ℹ more rows</code></pre>
+</div>
+</div>
+<p>Finally, we write the data to disk. As stated earlier, feel free to go beyond this tutorial, creating maps based on NYC neighbourhoods and building models. Good luck, and thank you!</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define output path to save final merged dataset in Delta format</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_four_file_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getwd</span>(),</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"data"</span>,</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"locations_sdf_updated_four"</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Write final dataset in Delta format with append mode to allow incremental writing</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  merged_two,</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> locations_sdf_updated_four_file_path,</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">mode =</span> <span class="st">"append"</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from the Spark session to free resources</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+
+
+<!-- -->
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  const viewSource = window.document.getElementById('quarto-view-source') ||
+                     window.document.getElementById('quarto-code-tools-source');
+  if (viewSource) {
+    const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+    viewSource.addEventListener("click", function(e) {
+      if (sourceUrl) {
+        // rstudio viewer pane
+        if (/\bcapabilities=\b/.test(window.location)) {
+          window.open(sourceUrl);
+        } else {
+          window.location.href = sourceUrl;
+        }
+      } else {
+        const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+        modal.show();
+      }
+      return false;
+    });
+  }
+  function toggleCodeHandler(show) {
+    return function(e) {
+      const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+      for (let i=0; i<detailsSrc.length; i++) {
+        const details = detailsSrc[i].parentElement;
+        if (show) {
+          details.open = true;
+        } else {
+          details.removeAttribute("open");
+        }
+      }
+      const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+      const fromCls = show ? "hidden" : "unhidden";
+      const toCls = show ? "unhidden" : "hidden";
+      for (let i=0; i<cellCodeDivs.length; i++) {
+        const codeDiv = cellCodeDivs[i];
+        if (codeDiv.classList.contains(fromCls)) {
+          codeDiv.classList.remove(fromCls);
+          codeDiv.classList.add(toCls);
+        } 
+      }
+      return false;
+    }
+  }
+  const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+  if (hideAllCode) {
+    hideAllCode.addEventListener("click", toggleCodeHandler(false));
+  }
+  const showAllCode = window.document.getElementById("quarto-show-all-code");
+  if (showAllCode) {
+    showAllCode.addEventListener("click", toggleCodeHandler(true));
+  }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./preprocessing_four.html" class="pagination-link  aria-label=" &lt;span="" two="" -="" processing="" raster="" data="" with="" apache="" sedona="" and="" sparklyr="" in="" r&lt;="" span&gt;"="">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Part Two - Processing Raster Data with Apache Sedona and Sparklyr in R</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+  </div>
+</nav><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
+<div class="sourceCode" id="cb21" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Combining Updated Locations Data with Initial Trip Data"</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span><span class="co"> </span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="co">  eval: true</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="co">  output: true</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="fu">## Introduction</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>If you recall, we had initially separated location and non-location data so as to gather more location-related data, such as median household income and population density around pickup and dropoff points.</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>Having accomplished that, we will now combine the updated locations data with the rest of the trip data.</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>This will be the last chapter for me, but please go further — create maps based on this data, and perform machine learning analysis too. You can find **Sparklyr machine learning documentation [here](https://spark.rstudio.com/guides/machine-learning/)**.</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>It has been a joy to come this far, and I hope you have learnt something new throughout this whole tutorial.</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>**FYI**, because we are not using Apache Sedona in this part, we are using the same Spark configuration as that used in Chapter One.</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>Anyhow, **let us get to work!**</span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Load required libraries</span></span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sparklyr)   <span class="co"># Spark connection and data manipulation</span></span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)      <span class="co"># Data manipulation functions</span></span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Install and set up Spark environment</span></span>
+<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_install</span>(<span class="st">"3.5.5"</span>)  <span class="co"># Install the specific version of Spark (3.5.5)</span></span>
+<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-32"><a href="#cb21-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Set Java and Spark home directory paths</span></span>
+<span id="cb21-33"><a href="#cb21-33" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"JAVA_HOME"</span><span class="ot">=</span><span class="st">"/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home"</span>)  <span class="co"># Set Java home directory for Spark</span></span>
+<span id="cb21-34"><a href="#cb21-34" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"SPARK_HOME"</span><span class="ot">=</span><span class="fu">spark_home_dir</span>(<span class="at">version =</span> <span class="st">"3.5.5"</span>))  <span class="co"># Set Spark home directory</span></span>
+<span id="cb21-35"><a href="#cb21-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-36"><a href="#cb21-36" aria-hidden="true" tabindex="-1"></a><span class="co"># Define working directory path for file management</span></span>
+<span id="cb21-37"><a href="#cb21-37" aria-hidden="true" tabindex="-1"></a>working_dir <span class="ot">&lt;-</span> <span class="st">"/Users/rodgersiradukunda/Library/CloudStorage/OneDrive-TheUniversityofLiverpool/geospatial_docker"</span></span>
+<span id="cb21-38"><a href="#cb21-38" aria-hidden="true" tabindex="-1"></a><span class="fu">setwd</span>(working_dir)  <span class="co"># Set the working directory</span></span>
+<span id="cb21-39"><a href="#cb21-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-40"><a href="#cb21-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Define path for Spark data</span></span>
+<span id="cb21-41"><a href="#cb21-41" aria-hidden="true" tabindex="-1"></a>spark_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"spark"</span>)</span>
+<span id="cb21-42"><a href="#cb21-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-43"><a href="#cb21-43" aria-hidden="true" tabindex="-1"></a><span class="co"># Create an empty list for Spark configuration settings</span></span>
+<span id="cb21-44"><a href="#cb21-44" aria-hidden="true" tabindex="-1"></a>config <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb21-45"><a href="#cb21-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-46"><a href="#cb21-46" aria-hidden="true" tabindex="-1"></a><span class="co"># Set Spark configurations for memory and performance optimisation</span></span>
+<span id="cb21-47"><a href="#cb21-47" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"-Djava.io.tmpdir="</span>, spark_dir)  <span class="co"># Set temporary directory for Spark</span></span>
+<span id="cb21-48"><a href="#cb21-48" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">"-XX:+UseCompressedOops"</span>  <span class="co"># Use compressed Oops for JVM performance</span></span>
+<span id="cb21-49"><a href="#cb21-49" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-memory</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">'10G'</span>  <span class="co"># Allocate 8GB of memory for the Spark driver</span></span>
+<span id="cb21-50"><a href="#cb21-50" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.fraction <span class="ot">&lt;-</span> <span class="fl">0.7</span>  <span class="co"># Set fraction of heap memory used for Spark storage</span></span>
+<span id="cb21-51"><a href="#cb21-51" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.partitions.local <span class="ot">&lt;-</span> <span class="dv">24</span>  <span class="co"># Set shuffle partitions (local setting based on workload)</span></span>
+<span id="cb21-52"><a href="#cb21-52" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.driver.extraJavaOptions <span class="ot">&lt;-</span> <span class="st">"-Xmx8G"</span>  <span class="co"># Set extra memory for driver</span></span>
+<span id="cb21-53"><a href="#cb21-53" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.serializer <span class="ot">&lt;-</span> <span class="st">"org.apache.spark.serializer.KryoSerializer"</span>  <span class="co"># Use KryoSerializer for better performance</span></span>
+<span id="cb21-54"><a href="#cb21-54" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span>  <span class="co"># Enable off-heap memory usage</span></span>
+<span id="cb21-55"><a href="#cb21-55" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.size <span class="ot">&lt;-</span> <span class="st">"4g"</span>  <span class="co"># Set 4GB for off-heap memory</span></span>
+<span id="cb21-56"><a href="#cb21-56" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.spill <span class="ot">&lt;-</span> <span class="st">"false"</span>  <span class="co"># Disable shuffle spill to disk</span></span>
+<span id="cb21-57"><a href="#cb21-57" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.cleaner.periodicGC.interval <span class="ot">&lt;-</span> <span class="st">"60s"</span>  <span class="co"># Periodic garbage collection interval</span></span>
+<span id="cb21-58"><a href="#cb21-58" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.files.maxPartitionBytes <span class="ot">&lt;-</span> <span class="st">"200m"</span>  <span class="co"># Set max partition size for shuffle files</span></span>
+<span id="cb21-59"><a href="#cb21-59" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.adaptive.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span>  <span class="co"># Enable adaptive query execution</span></span>
+<span id="cb21-60"><a href="#cb21-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-61"><a href="#cb21-61" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect to Spark with the specified configurations</span></span>
+<span id="cb21-62"><a href="#cb21-62" aria-hidden="true" tabindex="-1"></a>sc <span class="ot">&lt;-</span> <span class="fu">spark_connect</span>(</span>
+<span id="cb21-63"><a href="#cb21-63" aria-hidden="true" tabindex="-1"></a>  <span class="at">master =</span> <span class="st">"local[*]"</span>,  <span class="co"># Use all available cores for local execution</span></span>
+<span id="cb21-64"><a href="#cb21-64" aria-hidden="true" tabindex="-1"></a>  <span class="at">config =</span> config,      <span class="co"># Use the specified configurations</span></span>
+<span id="cb21-65"><a href="#cb21-65" aria-hidden="true" tabindex="-1"></a>  <span class="at">packages =</span> <span class="st">"delta"</span>    <span class="co"># Install the Delta Lake package for optimised storage</span></span>
+<span id="cb21-66"><a href="#cb21-66" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-67"><a href="#cb21-67" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb21-68"><a href="#cb21-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-69"><a href="#cb21-69" aria-hidden="true" tabindex="-1"></a><span class="fu">## Load the datasets</span></span>
+<span id="cb21-70"><a href="#cb21-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-71"><a href="#cb21-71" aria-hidden="true" tabindex="-1"></a>We start by loading the datasets.</span>
+<span id="cb21-72"><a href="#cb21-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-73"><a href="#cb21-73" aria-hidden="true" tabindex="-1"></a>As you can see below, in addition to **partitioning the data into 24 parts**, we also **specify the column to partition by**, and use **trip_id** which is common to both datasets.</span>
+<span id="cb21-74"><a href="#cb21-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-75"><a href="#cb21-75" aria-hidden="true" tabindex="-1"></a>This is because we shall later join the datasets based on this column, and we want **rows with the same trip_id to be in the same partitions** so as to **minimise shuffling of data**, which is quite computationally intensive.</span>
+<span id="cb21-76"><a href="#cb21-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-79"><a href="#cb21-79" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb21-80"><a href="#cb21-80" aria-hidden="true" tabindex="-1"></a><span class="co"># Read locations dataset in Delta format and register as a SQL view for querying</span></span>
+<span id="cb21-81"><a href="#cb21-81" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_three <span class="ot">&lt;-</span> <span class="fu">spark_read_delta</span>(</span>
+<span id="cb21-82"><a href="#cb21-82" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb21-83"><a href="#cb21-83" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"locations_sdf_updated_three"</span>)</span>
+<span id="cb21-84"><a href="#cb21-84" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span> </span>
+<span id="cb21-85"><a href="#cb21-85" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(trip_id <span class="sc">&gt;=</span> <span class="dv">40000000</span> <span class="sc">&amp;</span> trip_id <span class="sc">&lt;=</span> <span class="dv">40000010</span>) <span class="sc">%&gt;%</span> <span class="co"># filter for only ten rows </span></span>
+<span id="cb21-86"><a href="#cb21-86" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sdf_register</span>(<span class="st">"locations_sdf_updated_three_view"</span>)  <span class="co"># Register as view for SQL queries</span></span>
+<span id="cb21-87"><a href="#cb21-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-88"><a href="#cb21-88" aria-hidden="true" tabindex="-1"></a><span class="co"># Read trip data in Delta format and register as a SQL view</span></span>
+<span id="cb21-89"><a href="#cb21-89" aria-hidden="true" tabindex="-1"></a>trip_data_sdf <span class="ot">&lt;-</span> <span class="fu">spark_read_delta</span>(</span>
+<span id="cb21-90"><a href="#cb21-90" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb21-91"><a href="#cb21-91" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"trip_data_sdf"</span>)</span>
+<span id="cb21-92"><a href="#cb21-92" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span> </span>
+<span id="cb21-93"><a href="#cb21-93" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(trip_id <span class="sc">&gt;</span> <span class="dv">40000000</span>) <span class="sc">%&gt;%</span>  <span class="co"># Optional filtering</span></span>
+<span id="cb21-94"><a href="#cb21-94" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sdf_register</span>(<span class="st">"trip_data_sdf"</span>)</span>
+<span id="cb21-95"><a href="#cb21-95" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb21-96"><a href="#cb21-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-97"><a href="#cb21-97" aria-hidden="true" tabindex="-1"></a>Just a refresher on how these datasets look.</span>
+<span id="cb21-98"><a href="#cb21-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-101"><a href="#cb21-101" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb21-102"><a href="#cb21-102" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(locations_sdf_updated_three, <span class="at">width=</span><span class="cn">Inf</span>)</span>
+<span id="cb21-103"><a href="#cb21-103" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb21-104"><a href="#cb21-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-107"><a href="#cb21-107" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb21-108"><a href="#cb21-108" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(trip_data_sdf, <span class="at">width=</span><span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span>
+<span id="cb21-109"><a href="#cb21-109" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb21-110"><a href="#cb21-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-111"><a href="#cb21-111" aria-hidden="true" tabindex="-1"></a><span class="fu">## Joining the datasets</span></span>
+<span id="cb21-112"><a href="#cb21-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-113"><a href="#cb21-113" aria-hidden="true" tabindex="-1"></a>We start by joining the non-location data with the pickup location data, renaming certain variables, and dropping others in the process.</span>
+<span id="cb21-114"><a href="#cb21-114" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-117"><a href="#cb21-117" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb21-118"><a href="#cb21-118" aria-hidden="true" tabindex="-1"></a><span class="co"># Join trip data with pickup locations using trip_id and rename selected columns for clarity</span></span>
+<span id="cb21-119"><a href="#cb21-119" aria-hidden="true" tabindex="-1"></a>merged_one <span class="ot">&lt;-</span> <span class="fu">left_join</span>(</span>
+<span id="cb21-120"><a href="#cb21-120" aria-hidden="true" tabindex="-1"></a>  trip_data_sdf,</span>
+<span id="cb21-121"><a href="#cb21-121" aria-hidden="true" tabindex="-1"></a>  locations_sdf_updated_three <span class="sc">%&gt;%</span> <span class="fu">filter</span>(is_pickup <span class="sc">==</span> <span class="dv">1</span>),</span>
+<span id="cb21-122"><a href="#cb21-122" aria-hidden="true" tabindex="-1"></a>  <span class="at">by =</span> <span class="st">"trip_id"</span></span>
+<span id="cb21-123"><a href="#cb21-123" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span> </span>
+<span id="cb21-124"><a href="#cb21-124" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb21-125"><a href="#cb21-125" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_borough =</span> BoroName,</span>
+<span id="cb21-126"><a href="#cb21-126" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_neighbourhood =</span> NTAName, </span>
+<span id="cb21-127"><a href="#cb21-127" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_neigh_hhincome =</span> MdHHIncE,</span>
+<span id="cb21-128"><a href="#cb21-128" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_pop_density =</span> pop_density,</span>
+<span id="cb21-129"><a href="#cb21-129" aria-hidden="true" tabindex="-1"></a>    <span class="at">pickup_lcz_label =</span> lcz_label</span>
+<span id="cb21-130"><a href="#cb21-130" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
+<span id="cb21-131"><a href="#cb21-131" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb21-132"><a href="#cb21-132" aria-hidden="true" tabindex="-1"></a>    trip_id,</span>
+<span id="cb21-133"><a href="#cb21-133" aria-hidden="true" tabindex="-1"></a>    VendorID, </span>
+<span id="cb21-134"><a href="#cb21-134" aria-hidden="true" tabindex="-1"></a>    tpep_pickup_datetime, </span>
+<span id="cb21-135"><a href="#cb21-135" aria-hidden="true" tabindex="-1"></a>    tpep_dropoff_datetime, </span>
+<span id="cb21-136"><a href="#cb21-136" aria-hidden="true" tabindex="-1"></a>    passenger_count,</span>
+<span id="cb21-137"><a href="#cb21-137" aria-hidden="true" tabindex="-1"></a>    trip_distance,</span>
+<span id="cb21-138"><a href="#cb21-138" aria-hidden="true" tabindex="-1"></a>    pickup_hour,</span>
+<span id="cb21-139"><a href="#cb21-139" aria-hidden="true" tabindex="-1"></a>    pickup_dayofweek,</span>
+<span id="cb21-140"><a href="#cb21-140" aria-hidden="true" tabindex="-1"></a>    pickup_week,</span>
+<span id="cb21-141"><a href="#cb21-141" aria-hidden="true" tabindex="-1"></a>    pickup_month,</span>
+<span id="cb21-142"><a href="#cb21-142" aria-hidden="true" tabindex="-1"></a>    dropoff_hour,</span>
+<span id="cb21-143"><a href="#cb21-143" aria-hidden="true" tabindex="-1"></a>    dropoff_dayofweek,</span>
+<span id="cb21-144"><a href="#cb21-144" aria-hidden="true" tabindex="-1"></a>    dropoff_week,</span>
+<span id="cb21-145"><a href="#cb21-145" aria-hidden="true" tabindex="-1"></a>    dropoff_month,</span>
+<span id="cb21-146"><a href="#cb21-146" aria-hidden="true" tabindex="-1"></a>    is_weekend_pickup,</span>
+<span id="cb21-147"><a href="#cb21-147" aria-hidden="true" tabindex="-1"></a>    is_weekend_dropoff,</span>
+<span id="cb21-148"><a href="#cb21-148" aria-hidden="true" tabindex="-1"></a>    is_rush_hour_pickup,</span>
+<span id="cb21-149"><a href="#cb21-149" aria-hidden="true" tabindex="-1"></a>    trip_distance_scaled,</span>
+<span id="cb21-150"><a href="#cb21-150" aria-hidden="true" tabindex="-1"></a>    pickup_borough,</span>
+<span id="cb21-151"><a href="#cb21-151" aria-hidden="true" tabindex="-1"></a>    pickup_neighbourhood,</span>
+<span id="cb21-152"><a href="#cb21-152" aria-hidden="true" tabindex="-1"></a>    pickup_neigh_hhincome,</span>
+<span id="cb21-153"><a href="#cb21-153" aria-hidden="true" tabindex="-1"></a>    pickup_pop_density,</span>
+<span id="cb21-154"><a href="#cb21-154" aria-hidden="true" tabindex="-1"></a>    pickup_lcz_label</span>
+<span id="cb21-155"><a href="#cb21-155" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb21-156"><a href="#cb21-156" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-157"><a href="#cb21-157" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the merged pickup-enriched dataset</span></span>
+<span id="cb21-158"><a href="#cb21-158" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(merged_one, <span class="at">width =</span> <span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span>
+<span id="cb21-159"><a href="#cb21-159" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb21-160"><a href="#cb21-160" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-161"><a href="#cb21-161" aria-hidden="true" tabindex="-1"></a>We now join our updated data with dropoff location data, again renaming certain variables and dropping others.</span>
+<span id="cb21-162"><a href="#cb21-162" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-165"><a href="#cb21-165" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb21-166"><a href="#cb21-166" aria-hidden="true" tabindex="-1"></a><span class="co"># Join the merged pickup dataset with dropoff locations and rename/drop unnecessary columns</span></span>
+<span id="cb21-167"><a href="#cb21-167" aria-hidden="true" tabindex="-1"></a>merged_two <span class="ot">&lt;-</span> <span class="fu">left_join</span>(</span>
+<span id="cb21-168"><a href="#cb21-168" aria-hidden="true" tabindex="-1"></a>  merged_one,</span>
+<span id="cb21-169"><a href="#cb21-169" aria-hidden="true" tabindex="-1"></a>  locations_sdf_updated_three <span class="sc">%&gt;%</span> <span class="fu">filter</span>(is_pickup <span class="sc">==</span> <span class="dv">0</span>),</span>
+<span id="cb21-170"><a href="#cb21-170" aria-hidden="true" tabindex="-1"></a>  <span class="at">by =</span> <span class="st">"trip_id"</span></span>
+<span id="cb21-171"><a href="#cb21-171" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span> </span>
+<span id="cb21-172"><a href="#cb21-172" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb21-173"><a href="#cb21-173" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_borough =</span> BoroName,</span>
+<span id="cb21-174"><a href="#cb21-174" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_neighbourhood =</span> NTAName, </span>
+<span id="cb21-175"><a href="#cb21-175" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_neigh_hhincome =</span> MdHHIncE,</span>
+<span id="cb21-176"><a href="#cb21-176" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_pop_density =</span> pop_density,</span>
+<span id="cb21-177"><a href="#cb21-177" aria-hidden="true" tabindex="-1"></a>    <span class="at">dropoff_lcz_label =</span> lcz_label</span>
+<span id="cb21-178"><a href="#cb21-178" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
+<span id="cb21-179"><a href="#cb21-179" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(latitude, longitude, is_pickup, lcz_class))  <span class="co"># Drop redundant columns</span></span>
+<span id="cb21-180"><a href="#cb21-180" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb21-181"><a href="#cb21-181" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-182"><a href="#cb21-182" aria-hidden="true" tabindex="-1"></a>This is what our final dataset looks like.</span>
+<span id="cb21-183"><a href="#cb21-183" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-186"><a href="#cb21-186" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb21-187"><a href="#cb21-187" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the final merged dataset enriched with both pickup and dropoff spatial context</span></span>
+<span id="cb21-188"><a href="#cb21-188" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(merged_two, <span class="at">width =</span> <span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span>
+<span id="cb21-189"><a href="#cb21-189" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb21-190"><a href="#cb21-190" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-191"><a href="#cb21-191" aria-hidden="true" tabindex="-1"></a>Finally, we write the data to disk. As stated earlier, feel free to go beyond this tutorial, creating maps based on NYC neighbourhoods and building models. Good luck, and thank you!</span>
+<span id="cb21-192"><a href="#cb21-192" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-195"><a href="#cb21-195" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb21-196"><a href="#cb21-196" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb21-197"><a href="#cb21-197" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-198"><a href="#cb21-198" aria-hidden="true" tabindex="-1"></a><span class="co"># Define output path to save final merged dataset in Delta format</span></span>
+<span id="cb21-199"><a href="#cb21-199" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_four_file_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(</span>
+<span id="cb21-200"><a href="#cb21-200" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getwd</span>(),</span>
+<span id="cb21-201"><a href="#cb21-201" aria-hidden="true" tabindex="-1"></a>  <span class="st">"data"</span>,</span>
+<span id="cb21-202"><a href="#cb21-202" aria-hidden="true" tabindex="-1"></a>  <span class="st">"locations_sdf_updated_four"</span></span>
+<span id="cb21-203"><a href="#cb21-203" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-204"><a href="#cb21-204" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-205"><a href="#cb21-205" aria-hidden="true" tabindex="-1"></a><span class="co"># Write final dataset in Delta format with append mode to allow incremental writing</span></span>
+<span id="cb21-206"><a href="#cb21-206" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
+<span id="cb21-207"><a href="#cb21-207" aria-hidden="true" tabindex="-1"></a>  merged_two,</span>
+<span id="cb21-208"><a href="#cb21-208" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> locations_sdf_updated_four_file_path,</span>
+<span id="cb21-209"><a href="#cb21-209" aria-hidden="true" tabindex="-1"></a>  <span class="at">mode =</span> <span class="st">"append"</span></span>
+<span id="cb21-210"><a href="#cb21-210" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-211"><a href="#cb21-211" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb21-212"><a href="#cb21-212" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-215"><a href="#cb21-215" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb21-216"><a href="#cb21-216" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from the Spark session to free resources</span></span>
+<span id="cb21-217"><a href="#cb21-217" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span>
+<span id="cb21-218"><a href="#cb21-218" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+</code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div></div></div></div></div>
+</div> <!-- /content -->
+
+
+
+
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io/edit/main/preprocessing_five.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer><script src="site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

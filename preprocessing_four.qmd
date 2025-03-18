@@ -2,14 +2,8 @@
 title: "Part Two - Processing Raster Data with Apache Sedona and Sparklyr in R"
 subtitle: "Using Raster Tiles to Determine Local Climate Zones of Pickup and Dropoff Locations"
 execute: 
-  eval: false
+  eval: true
   output: true
-format: 
-  html:
-    self-contained: true
-    toc: true
-    df-print: kable
-editor: visual
 ---
 
 ## Introduction
@@ -135,15 +129,8 @@ locations_sdf_updated_two <- spark_read_delta(
   sc,
   path = file.path(getwd(), "data", "locations_sdf_updated_two")
 ) |> 
-  filter(trip_id > 40000000) %>%  # Optional filtering
-  sdf_repartition(partitions = 24) %>%  # Repartition for parallelism
+  filter(trip_id >= 40000000 & trip_id <= 40000010) %>% # filter for only ten rows 
   sdf_register("locations_sdf_updated_two_view")  # Register as temporary view for SQL
-```
-
-```{r}
-# Check partition sizes to understand data distribution
-locations_sdf_updated_two %>% 
-  sdf_partition_sizes()
 ```
 
 We then load our raster data.
@@ -254,7 +241,7 @@ locations_sdf_updated_three %>% glimpse()
 ```{r}
 # Print formatted preview for review
 withr::with_options(
-  list(pillar.sigfig = 8),
+  list(pillar.sigfig = 6),
   print(locations_sdf_updated_three, n = 10, width = Inf)
 )
 ```

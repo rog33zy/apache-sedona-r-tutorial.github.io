@@ -1,19 +1,13 @@
 ---
 title: "Preprocessing and Feature Engineering for Yellow Cab Trip Data"
 execute: 
-  eval: false
+  eval: true
   output: true
-format: 
-  html:
-    self-contained: true
-    toc: true
-    df-print: kable
-editor: visual
 ---
 
 ## Introduction
 
-In this chapter, we shall demonstrate how to perform basic data cleaning and feature engineering using Sparklyr, and save the data as Delta tables.
+In this chapter, we shall demonstrate how to perform basic data cleaning and feature engineering using Sparklyr, and how to save the data in the Delta Lake format.
 
 The primary dataset was downloaded from Kaggle [here](https://www.kaggle.com/datasets/elemento/nyc-yellow-taxi-trip-data?resource=download). It provides information about taxi trips, including the pickup and dropoff times and locations. Our goal is to enrich it using additional data obtained from geospatial sources, and leave the rest to you to perform analysis and determine how best to predict taxi trip durations.
 
@@ -49,7 +43,7 @@ library(dplyr)      # Data manipulation functions
 
 We can now use `sparklyr` to download and install Spark. In this tutorial, we shall install **Spark version 3.5.5** and create the `JAVA_HOME` and `SPARK_HOME` environment variables. Although you can initialise these variables system-wide, it is often easier to set them within your working file, especially if you have multiple installations of Spark and Java on your system.
 
-Whilst Spark 3.5 is compiled for Java 8, 11, and 17, I would recommend using **Java 11**, as it has proven to be more stable in my experience compared to the other two versions. Additionally, I cannot overemphasise the importance of downloading a Java version that is **natively designed for your system's processor**. As previously stated, I own an M1 MacBook (ARM 64-bit), so I previously encountered memory issues when using Java designed for Intel processors (x86 64-bit). Switching to an ARM-based Java greatly improved the performance of my code.
+Whilst Spark 3.5 is compiled for Java 8, 11, and 17, I would recommend using **Java 11**, as it has proven to be more stable in my experience compared to the other two versions. Additionally, I cannot overemphasise the importance of downloading a Java version that is **natively designed for your system's processor**. As previously stated, I own an M1 MacBook (ARM 64-bit), so I previously encountered memory issues when using Java designed for Intel processors (x86 64-bit) as the processor was doing extra avoidable work. Switching to an ARM-based Java greatly improved the performance of my code.
 
 You can freely download an appropriate Java version for your machine [here](https://www.azul.com/downloads/?package=jdk#zulu).
 
@@ -72,9 +66,9 @@ working_dir <- "/Users/rodgersiradukunda/Library/CloudStorage/OneDrive-TheUniver
 setwd(working_dir)  # Set the working directory
 ```
 
-We shall now create a folder where Spark will store temporary files. By default, Spark stores these files in memory, but in our case, we want them to be stored on disk. This is why we specify a `spark_dir` path to direct Spark to use disk storage for its temporary file storage.
-
 ## Configuring Spark
+
+We shall now create a folder where Spark will store temporary files. By default, Spark stores these files in memory, but in our case, we want them to be stored on disk. This is why we specify a `spark_dir` path to direct Spark to use disk storage for its temporary file storage.
 
 ```{r}
 # Define path for Spark data
@@ -85,7 +79,7 @@ We now initialise a list and provide configuration settings for Spark. This is a
 
 Spark runs on the **Java Virtual Machine (JVM)**, and **Java heap space** refers to the memory allocated to the JVM during runtime for storing objects and data. The heap memory is divided into **Spark memory (M)**, **reserved memory**, and **user memory**. Spark memory itself is divided into two parts: **execution** and **storage (R)**. Execution memory is used for computations such as shuffles, joins, sorts, and aggregations. Storage memory, on the other hand, is used for caching and propagating internal data across the cluster (when running in cluster mode). Read more about this [here](https://spark.apache.org/docs/latest/tuning.html).
 
-In our case, since we are running in **local mode**, we set the JVM heap space to **10GB** using `sparklyr.shell.driver-memory`. We then allocate **70% of the JVM heap space** to Spark memory (M) using the `spark.memory.fraction` option. This means **7GB** is reserved for both storage and execution. By default, **50% of M** (i.e., **3.5GB**) is reserved for storage (R). Although this can be adjusted using `spark.memory.storageFraction`, we leave it at the default here. Importantly, when no execution memory is needed, R can make use of the entire 7GB.
+In our case, since we are running our code in **local mode**, we set the JVM heap space to **10GB** using `sparklyr.shell.driver-memory`. We then allocate **70% of the JVM heap space** to Spark memory (M) using the `spark.memory.fraction` option. This means **7GB** is reserved for both storage and execution. By default, **50% of M** (i.e., **3.5GB**) is reserved for storage (R). Although this can be adjusted using `spark.memory.storageFraction`, we leave it at the default here. Importantly, when no execution memory is needed, R can make use of the entire 7GB.
 
 Other configuration choices we make include enabling the storage of **2GB of data off-heap** (i.e., outside the JVM) using the settings `spark.memory.offHeap.enabled = "true"` and `spark.memory.offHeap.size = "2g"`. We also instruct Spark **not to write intermediate shuffle data to disk**—to avoid I/O bottlenecks—by setting `spark.sql.shuffle.spill = "false"`.
 
@@ -155,6 +149,8 @@ sc <- spark_connect(
 I recommend using the **Spark Web User Interface (UI)** to track metrics associated with your Spark application. You can access it as shown below.
 
 ```{r}
+#| eval: false
+
 # Open Spark web UI for monitoring the connection
 spark_web(sc)
 ```
@@ -373,6 +369,12 @@ yellow_cab_sdf <- yellow_cab_sdf %>%
 ```
 
 ```{r}
+#| echo: false
+
+yellow_cab_sdf <- yellow_cab_sdf %>% filter(trip_id >= 400 & trip_id <= 405)
+```
+
+```{r}
 # Create separate DataFrames for pickup and dropoff locations
 pickup_sdf <- yellow_cab_sdf %>% 
   transmute(
@@ -396,7 +398,7 @@ locations_sdf <- sdf_bind_rows(
   dropoff_sdf
 )
 
-print(locations_sdf, width = Inf)
+print(locations_sdf, width = Inf, n=10)
 ```
 
 ```{r}
@@ -405,6 +407,8 @@ trip_data_sdf <- yellow_cab_sdf %>%
   select(
     -c(pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude)  # Exclude latitude and longitude
   )
+
+print(trip_data_sdf, width = Inf, n=10)
 ```
 
 ## Writing the data

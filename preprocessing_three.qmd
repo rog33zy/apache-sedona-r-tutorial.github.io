@@ -2,14 +2,8 @@
 title: "Part One - Processing Raster Data with Apache Sedona and Sparklyr in R"
 subtitle: "Using Raster Data to Determine Population Density Around Pickup and Dropoff Points"
 execute: 
-  eval: false
+  eval: true
   output: true
-format: 
-  html:
-    self-contained: true
-    toc: true
-    df-print: kable
-editor: visual
 ---
 
 ## Introduction
@@ -116,10 +110,6 @@ invoke_static(
   spark_session(sc),
   "r"
 )
-
-# Start Spark's web UI for monitoring
-spark_web(sc)
-
 ```
 
 ## Loading updated locations data
@@ -149,24 +139,13 @@ locations_sdf_updated_one <- spark_read_delta(
     "locations_sdf_updated_one"
   )
 ) |> 
-  filter(trip_id > 40000000) %>% 
-  sdf_repartition(partitions = 24) %>%  # Repartition for better parallel processing
+  filter(trip_id >= 40000000 & trip_id <= 40000010) %>% # Filter for only ten rows
   sdf_register("locations_sdf_updated_one_view")  # Register as a temporary view
 ```
 
-```{r}
-# Check the size of each partition in the dataframe
-locations_sdf_updated_one %>% sdf_partition_sizes()
-```
 
 ```{r}
-# Check the number of rows in the dataframe
-locations_sdf_updated_one |> 
-  sdf_nrow()
-```
-
-```{r}
-print(locations_sdf_updated_one, width=Inf)
+print(locations_sdf_updated_one, width=Inf, n=10)
 ```
 
 ## Loading WorldPop Population Density dataset
@@ -287,8 +266,8 @@ locations_sdf_updated_two %>% glimpse()
 
 # Print a preview of the resulting dataframe with specific formatting options
 withr::with_options(
-  list(pillar.sigfig = 11),
-  print(locations_sdf_updated_two, n=30)
+  list(pillar.sigfig = 6),
+  print(locations_sdf_updated_two, n=10)
 )
 ```
 

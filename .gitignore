@@ -20,3 +20,5 @@ data/
 # Other
 *.Rproj
 
+
+/.quarto/

@@ -2,14 +2,8 @@
 title: "Processing Vector Data with Apache Sedona and Sparklyr in R"
 subtitle: "Using Vector Data to Obtain Median Household Income in Pickup and Droppoff Neighbourhoods"
 execute: 
-  eval: false
+  eval: true
   output: true
-format: 
-  html:
-    self-contained: true
-    toc: true
-    df-print: kable
-editor: visual
 ---
 
 ## Introduction
@@ -149,6 +143,8 @@ invoke_static(
 ```
 
 ```{r}
+#| eval: false
+
 # Launch Spark web UI to monitor the Spark session
 spark_web(sc)
 ```
@@ -169,7 +165,7 @@ locations_sdf <- spark_read_delta(
   ) %>% 
     sdf_repartition(24)
 
-print(locations_sdf, width=Inf)
+print(locations_sdf, width=Inf, n=10)
 ```
 
 The data contains nearly **94 million rows**!
@@ -177,6 +173,19 @@ The data contains nearly **94 million rows**!
 ```{r}
 # Print the number of rows in the locations SDF (Spark DataFrame)
 sdf_nrow(locations_sdf)
+```
+
+And is partitioned equally for optimised wide operations, especially joins. Wide operations are those that require data shuffling or exchange between multiple executors such as aggregations and joins. Meanwhile, narrow transformations do not require any exchange of data. Examples of narrow transformations include select and filter.
+
+```{r}
+locations_sdf %>% sdf_partition_sizes()
+```
+
+```{r}
+#| echo: false
+
+locations_sdf <- locations_sdf %>% 
+  filter(trip_id >= 40000000 & trip_id <= 40000100)
 ```
 
 ### Median household income by neighbourhood data
@@ -191,7 +200,7 @@ nyc_nta_hh_income <- spark_read_csv(sc, path = nyc_nta_hh_income_file_path, name
 
 ```{r}
 # Display the income data
-print(nyc_nta_hh_income, width = Inf)
+print(nyc_nta_hh_income, width = Inf, n=10)
 ```
 
 ### NYC neighbourhoods data
@@ -300,11 +309,13 @@ locations_sdf_updated_no_geom <- locations_sdf_updated %>%
 Our final data is as shown below. Not too bad for the few lines of code written.
 
 ```{r}
+
 # Print the updated data with all relevant fields (no geometry)
 withr::with_options(
-  list(pillar.sigfig = 11),
-  print(locations_sdf_updated_no_geom)
+  list(pillar.sigfig = 6),
+  print(locations_sdf_updated_no_geom, n=10)
 )
+
 ```
 
 We now write our data to **Delta** format as usual.
