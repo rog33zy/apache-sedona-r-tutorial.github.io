@@ -195,6 +195,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#loading-worldpop-population-density-dataset" id="toc-loading-worldpop-population-density-dataset" class="nav-link" data-scroll-target="#loading-worldpop-population-density-dataset"><span class="header-section-number">4.3</span> Loading WorldPop Population Density dataset</a></li>
   <li><a href="#joining-point-data-with-raster-data" id="toc-joining-point-data-with-raster-data" class="nav-link" data-scroll-target="#joining-point-data-with-raster-data"><span class="header-section-number">4.4</span> Joining point data with raster data</a></li>
   <li><a href="#saving-the-data" id="toc-saving-the-data" class="nav-link" data-scroll-target="#saving-the-data"><span class="header-section-number">4.5</span> Saving the data</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references"><span class="header-section-number">4.6</span> References</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io/edit/main/preprocessing_three.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -204,7 +205,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
 <div class="quarto-title-block"><div><h1 class="title"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Part One - Processing Raster Data with Apache Sedona and Sparklyr in R</span></h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
-<p class="subtitle lead">Using Raster Data to Determine Population Density Around Pickup and Dropoff Points</p>
+<p class="subtitle lead">Using WorldPop Data to Determine Population Density Around Pickup and Dropoff Points</p>
 </div>
 
 
@@ -223,17 +224,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="introduction" class="level2" data-number="4.1">
 <h2 data-number="4.1" class="anchored" data-anchor-id="introduction"><span class="header-section-number">4.1</span> Introduction</h2>
-<p>We are going to demonstrate how to obtain information from <strong>raster files</strong> based on coordinates in this chapter. Let us assume that there is a relationship between the <strong>duration of a taxi ride</strong> and the <strong>population density</strong> of an area. We will, therefore, need to extract population density values at each <strong>pickup and dropoff location</strong>. Such granular data is typically available in <strong>raster format</strong>, which is why we use <strong>WorldPop population density data</strong> with a resolution of <strong>1 km by 1 km</strong> for this purpose. You can download the data <a href="https://www.worldpop.org">here</a> to follow along.</p>
-<p>The <strong>Spark configuration</strong> used for this chapter — and the next one — is <strong>identical</strong> to that used in <strong>Chapter 2</strong>, so it has <strong>not been included below for brevity’s sake</strong>.</p>
-<p>Furthermore, because I need to <strong>re-run this code multiple times</strong> to render this website, I shall <strong>filter only a few rows</strong> from the <strong>94 million</strong> we previously worked with, as I will be constantly updating this site. <strong>In the actual analysis I conducted, however, I used the full dataset.</strong></p>
-<p>You can find out more about using <strong>Apache Sedona for raster manipulation</strong> <a href="https://sedona.apache.org">here</a>.</p>
+<p>In this chapter, we are going to demonstrate how to obtain information from raster files based on geographic coordinates. Let us assume that there is a relationship between the duration of a taxi (dependent variable) ride and the population density of an area. We will, therefore, need to extract population density values at each pickup and dropoff location. Such granular data is typically available in <strong>raster format</strong>, which is why we use <strong>WorldPop population density data</strong> with a resolution of <strong>1 km by 1 km</strong> for this purpose. You can download the data <a href="https://data.worldpop.org/GIS/Population_Density/Global_2000_2020_1km_UNadj/2016/USA/usa_pd_2016_1km_UNadj.tif">here</a> to follow along.</p>
+<p>The Spark configuration used in this chapter — and the next one — is identical to the one used in Chapter 3, so it is not shown below for brevity’s sake.</p>
+<p>Furthermore, because I need to re-run this code multiple times to render this website, I shall filter only a few rows from the 94 million we previously worked with, as I will be constantly updating this site. In the actual analysis I conducted, however, I used the full dataset.</p>
+<p>You can find out more about using Apache Sedona for raster manipulation <a href="https://sedona.apache.org/1.4.1/api/rdocs/articles/raster.html">here</a>.</p>
 </section>
 <section id="loading-updated-locations-data" class="level2" data-number="4.2">
 <h2 data-number="4.2" class="anchored" data-anchor-id="loading-updated-locations-data"><span class="header-section-number">4.2</span> Loading updated locations data</h2>
-<p>We start by <strong>loading our updated locations data</strong>, which now contains <strong>household median income by neighbourhood</strong> information.</p>
-<p>To reiterate, I will <strong>filter for about 14 million rows</strong> here so that I can <strong>render this webpage faster</strong>. However, sometimes in your analysis, you will find that you have <strong>too much data and limited memory</strong>, especially when running <strong>complex transformations</strong>.</p>
-<p>In such cases, you can <strong>filter for specific rows</strong>, perform your analysis on that subset, and then <strong>append the results to your delta tables</strong>. You can repeat this process for another set of rows until you are done.</p>
-<p>For instance, knowing that I have <strong>trip ID values ranging from 0 to about 48,000,000</strong>, I would:</p>
+<p>We start by loading our updated locations data, which now contains household median income by neighbourhood information.</p>
+<p>To reiterate, I will filter for a few rows here so that I can render this webpage faster. Sometimes in your analysis, you will find that you have too much data to fit in memory, especially when running complex transformations. In such cases, you can filter for specific rows, perform your analysis on that subset, and then append the results to your delta tables. You can repeat this process for another set of rows until you are done.</p>
+<p>For instance, knowing that I have trip ID values ranging from 0 to about 48,000,000, I would:</p>
 <ul>
 <li>First filter for rows between <strong>0 and 16 million</strong>,<br>
 </li>
@@ -243,7 +243,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
 <li><strong>Appending to the same folder</strong> each time.</li>
 </ul>
-<p>If you have <strong>enough RAM and cores</strong>, though, <strong>feel free to run everything at once</strong> — go crazy with it!</p>
+<p>If you have enough RAM and cores, though, feel free to run everything at once — go crazy with it!</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define path to the updated locations Delta table</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_one <span class="ot">&lt;-</span> <span class="fu">spark_read_delta</span>(</span>
@@ -296,35 +296,42 @@ range</code></pre>
 </section>
 <section id="loading-worldpop-population-density-dataset" class="level2" data-number="4.3">
 <h2 data-number="4.3" class="anchored" data-anchor-id="loading-worldpop-population-density-dataset"><span class="header-section-number">4.3</span> Loading WorldPop Population Density dataset</h2>
-<p>The difference when using <strong>raster data</strong> compared to vector data with <strong>Apache Sedona</strong> is that we <strong>do not import raster in its native format directly</strong>. Instead, we must <strong>first load it as a binary dataframe</strong>, and <strong>then convert it into its native raster format</strong> within Sedona.</p>
-<p>Also, <strong>bear in mind</strong> that <strong>Sedona only accepts raster files</strong> in the following formats:<br>
+<p>The difference when using raster data compared to vector data with Apache Sedona is that we <strong>do not import raster in its native format directly</strong>. Instead, we must <strong>first load it as a binary dataframe</strong>, and <strong>then convert it into its native raster format</strong> within Sedona.</p>
+<p>Also, bear in mind that Sedona only accepts raster files in the following formats:<br>
 - <strong>Arc Info ASCII Grid</strong>,<br>
 - <strong>GeoTIFF</strong>, and<br>
 - <strong>NetCDF</strong>.</p>
-<p>If your data is in <strong>any other raster format</strong>, you will first need to <strong>convert it to one of these supported formats</strong>.</p>
-<p>I have found <strong>GDAL</strong> to be <strong>particularly useful for converting between different raster formats</strong> — definitely a tool to keep in your geospatial toolbox!</p>
+<p>If your data is in any other raster format, you will first need to convert it to one of these supported formats.</p>
+<p>I have found <strong>GDAL</strong> to be particularly useful for converting between different raster formats. For this tutorial, I used GDAL (command line) to compress the original US population density raster file, and then clip it using the NYC boundaries shapefile. I used the Deflate lossless compression algorithm. You want to work with as small a file as possible as the processing can be quite memory intensive.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the raster data for world population (NYC)</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>world_pop_raster_filepath <span class="ot">&lt;-</span> <span class="fu">file.path</span>(</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getwd</span>(),</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"data"</span>,</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"raster"</span>,</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"worldpop"</span>,</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"nyc.tif"</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compressing the raster file</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> <span class="at">-co</span> COMPRESS=DEFLATE usa_pd_2016_1km_UNadj_clipped.tif usa_pd_2016_1km_UNadj_compressed.tif</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Clipping the compressed raster using a shapefile boundary</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> <span class="at">-cutline</span> nynta2020.shp <span class="at">-crop_to_cutline</span> usa_pd_2016_1km_UNadj_compressed.tif nyc.tif</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the raster data as a binary file</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>world_pop_binary <span class="ot">&lt;-</span> <span class="fu">spark_read_binary</span>(</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  sc,</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">dir =</span> world_pop_raster_filepath,</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"worldpop"</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the raster data for world population (NYC)</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>world_pop_raster_filepath <span class="ot">&lt;-</span> <span class="fu">file.path</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getwd</span>(),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"data"</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"raster"</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"worldpop"</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"nyc.tif"</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the raster data as a binary file</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>world_pop_binary <span class="ot">&lt;-</span> <span class="fu">spark_read_binary</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">dir =</span> world_pop_raster_filepath,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"worldpop"</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We obtain raster geometry from our GeoTiff data.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Register the world population raster as a temporary view</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>world_pop_binary <span class="sc">|&gt;</span> <span class="fu">sdf_register</span>(<span class="st">"worldpop_view"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Register the world population raster as a temporary view</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>world_pop_binary <span class="sc">|&gt;</span> <span class="fu">sdf_register</span>(<span class="st">"worldpop_view"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning in arrow_collect(object, ...): NAs introduced by coercion to integer
 range</code></pre>
@@ -337,26 +344,26 @@ range</code></pre>
 1 file:/Users/rodgersiradukunda/Library/CloudStorage… 2025-02-27 01:46:58  26274
 # ℹ 1 more variable: content &lt;arrw_bnr&gt;</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract raster data from the GeoTiff file using Sedona</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>worldpop_sdf <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  sc,</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT RS_FromGeoTiff(content) AS raster FROM worldpop_view</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Register the raster data as a temporary view</span></span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>worldpop_sdf <span class="sc">|&gt;</span> <span class="fu">sdf_register</span>(<span class="st">"worldpop_view"</span>) <span class="sc">|&gt;</span> <span class="fu">compute</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract raster data from the GeoTiff file using Sedona</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>worldpop_sdf <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT RS_FromGeoTiff(content) AS raster FROM worldpop_view</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Register the raster data as a temporary view</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>worldpop_sdf <span class="sc">|&gt;</span> <span class="fu">sdf_register</span>(<span class="st">"worldpop_view"</span>) <span class="sc">|&gt;</span> <span class="fu">compute</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning in arrow_collect(object, ...): NAs introduced by coercion to integer
 range</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   table&lt;`dbplyr_zkzDgDxLAC`&gt; [?? x 1]
+<pre><code># Source:   table&lt;`dbplyr_BhE89dZkou`&gt; [?? x 1]
 # Database: spark_connection
 # ℹ 1 more variable: raster &lt;arrw_bnr&gt;</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>worldpop_sdf <span class="sc">%&gt;%</span> <span class="fu">glimpse</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>worldpop_sdf <span class="sc">%&gt;%</span> <span class="fu">glimpse</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Rows: ??</code></pre>
 </div>
@@ -370,7 +377,7 @@ Database: spark_connection
 $ raster &lt;arrw_bnr&gt; &lt;00, 10, 00, 00, 00, 67, 65, 6f, 74, 69, 66, 66, 5f, 63, 6…</code></pre>
 </div>
 </div>
-<p>We can <strong>retrieve metadata</strong> from our raster file, including:<br>
+<p>We can retrieve metadata from our raster file, including:<br>
 - The <strong>upper left coordinates</strong> of the raster (in the raster’s coordinate system units),<br>
 - The <strong>width and height</strong> of the raster (in number of pixels),<br>
 - The <strong>spatial resolution</strong> of each pixel (in units of the raster’s CRS),<br>
@@ -387,123 +394,138 @@ $ raster &lt;arrw_bnr&gt; &lt;00, 10, 00, 00, 00, 67, 65, 6f, 74, 69, 66, 66, 5f
 - <strong>SRID</strong>: <code>4326</code> (WGS 84)<br>
 - <strong>Number of bands</strong>: <code>2</code><br>
 - <strong>Tile width</strong>: <code>66</code>, <strong>Tile height</strong>: <code>15</code></p>
-<p>All this information is important when <strong>interpreting and working with raster data</strong>, especially when performing <strong>coordinate-based queries</strong>.</p>
+<p>All this information is important when interpreting and working with raster data, especially when performing coordinate-based queries.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Retrieve and view metadata for the world population raster</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>worldpop_sdf_metadata <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  sc,</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT RS_MetaData(raster) FROM worldpop_view</span></span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span> <span class="fu">collect</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Retrieve and view metadata for the world population raster</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>worldpop_sdf_metadata <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT RS_MetaData(raster) FROM worldpop_view</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span> <span class="fu">collect</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning in arrow_enabled_object.spark_jobj(sdf): Arrow disabled due to columns:
 rs_metadata(raster)</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Glimpse at the metadata information</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>worldpop_sdf_metadata <span class="sc">|&gt;</span> <span class="fu">glimpse</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">width =</span> <span class="dv">100</span>)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Glimpse at the metadata information</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>worldpop_sdf_metadata <span class="sc">|&gt;</span> <span class="fu">glimpse</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Rows: 1
 Columns: 1
-$ `rs_metadata(raster)` &lt;list&gt; [-74.25125, 40.90792, 66, 49, 0.008333333, -0.0…</code></pre>
+$ `rs_metadata(raster)` &lt;list&gt; [-74.25125, 40.90792, 66, 49, 0.008333333, -0.008333333, 0, 0, 4326…</code></pre>
 </div>
 </div>
 </section>
 <section id="joining-point-data-with-raster-data" class="level2" data-number="4.4">
 <h2 data-number="4.4" class="anchored" data-anchor-id="joining-point-data-with-raster-data"><span class="header-section-number">4.4</span> Joining point data with raster data</h2>
-<p>We now <strong>conduct the join using Spatial SQL</strong>, as it is much easier and more intuitive than using Apache Sedona’s R functions for raster operations.</p>
-<p>By leveraging <strong>Spatial SQL</strong>, we can directly query raster values at specific pickup and dropoff coordinates, simplifying what would otherwise be a more complex process if done via function-based syntax.</p>
+<p>We now conduct the join using Spatial SQL, as it is much easier and more intuitive than using Apache Sedona’s R functions for raster operations in my opinion.</p>
+<p>By leveraging Spatial SQL, we can directly query raster values at specific pickup and dropoff coordinates, simplifying what would otherwise be a more complex process if done via function-based syntax.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform a spatial join between the locations and the world population data to calculate population density</span></span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_two <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  sc,</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT </span></span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="st">    /*+ BROADCAST(w) */ l.*, RS_Value(w.raster, ST_Point(l.longitude, l.latitude)) AS pop_density</span></span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a><span class="st">  FROM</span></span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="st">    locations_sdf_updated_one_view l</span></span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a><span class="st">  LEFT JOIN worldpop_view w</span></span>
-<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a><span class="st">    ON RS_Intersects(w.raster, ST_POINT(l.longitude, l.latitude))</span></span>
-<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
-<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform a spatial join between the locations and the world population data to calculate population density</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_two <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT </span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="st">    /*+ BROADCAST(w) */ l.*, RS_Value(w.raster, ST_Point(l.longitude, l.latitude)) AS pop_density</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a><span class="st">  FROM</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a><span class="st">    locations_sdf_updated_one_view l</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a><span class="st">  LEFT JOIN worldpop_view w</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a><span class="st">    ON RS_Intersects(w.raster, ST_POINT(l.longitude, l.latitude))</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can now take a look at the result of our join below.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Glimpse at the updated data with population density</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_two <span class="sc">%&gt;%</span> <span class="fu">glimpse</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Glimpse at the updated data with population density</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_two <span class="sc">%&gt;%</span> <span class="fu">glimpse</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Rows: ??</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Warning in arrow_collect(object, ...): NAs introduced by coercion to integer
-range</code></pre>
+<pre><code>Warning in arrow_collect(object, ...): NAs introduced by coercion to integer range</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Columns: 9
 Database: spark_connection
-$ trip_id     &lt;dbl&gt; 40000000, 40000001, 40000002, 40000003, 40000004, 40000005…
-$ latitude    &lt;dbl&gt; 40.75250, 40.72693, 40.72448, 40.76216, 40.74357, 40.75565…
-$ longitude   &lt;dbl&gt; -73.97816, -74.00348, -74.00199, -73.97910, -73.99427, -73…
-$ is_pickup   &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0…
-$ BoroName    &lt;chr&gt; "Manhattan", "Manhattan", "Manhattan", "Manhattan", "Manha…
-$ NTA2020     &lt;chr&gt; "MN0604", "MN0201", "MN0201", "MN0502", "MN0401", "MN0502"…
-$ NTAName     &lt;chr&gt; "East Midtown-Turtle Bay", "SoHo-Little Italy-Hudson Squar…
-$ MdHHIncE    &lt;int&gt; 161934, 133847, 133847, 153871, 118915, 153871, 161934, 13…
-$ pop_density &lt;dbl&gt; 4927.671, 22022.211, 14979.832, 14245.537, 37489.418, 4927…</code></pre>
+$ trip_id     &lt;dbl&gt; 40000000, 40000001, 40000002, 40000003, 40000004, 40000005, 40000006, 40000007…
+$ latitude    &lt;dbl&gt; 40.75250, 40.72693, 40.72448, 40.76216, 40.74357, 40.75565, 40.75845, 40.75144…
+$ longitude   &lt;dbl&gt; -73.97816, -74.00348, -74.00199, -73.97910, -73.99427, -73.97939, -73.95974, -…
+$ is_pickup   &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+$ BoroName    &lt;chr&gt; "Manhattan", "Manhattan", "Manhattan", "Manhattan", "Manhattan", "Manhattan", …
+$ NTA2020     &lt;chr&gt; "MN0604", "MN0201", "MN0201", "MN0502", "MN0401", "MN0502", "MN0604", "MN0603"…
+$ NTAName     &lt;chr&gt; "East Midtown-Turtle Bay", "SoHo-Little Italy-Hudson Square", "SoHo-Little Ita…
+$ MdHHIncE    &lt;int&gt; 161934, 133847, 133847, 153871, 118915, 153871, 161934, 138337, 153871, 138337…
+$ pop_density &lt;dbl&gt; 4927.671, 22022.211, 14979.832, 14245.537, 37489.418, 4927.671, 41234.668, 206…</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Print a preview of the resulting dataframe with specific formatting options</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>withr<span class="sc">::</span><span class="fu">with_options</span>(</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">pillar.sigfig =</span> <span class="dv">6</span>),</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(locations_sdf_updated_two, <span class="at">n=</span><span class="dv">10</span>)</span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Print a preview of the resulting dataframe with specific formatting options</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(locations_sdf_updated_two, <span class="at">n=</span><span class="dv">10</span>, <span class="at">width=</span><span class="cn">Inf</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Warning in arrow_collect(object, ...): NAs introduced by coercion to integer
-range</code></pre>
+<pre><code>Warning in arrow_collect(object, ...): NAs introduced by coercion to integer range</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   table&lt;`sparklyr_tmp_c104c452_2b88_4e04_9a2d_2e0ae0408c71`&gt; [?? x 9]
+<pre><code># Source:   table&lt;`sparklyr_tmp_7ab5ae36_1fb6_4826_9be0_12adb5f8846b`&gt; [?? x 9]
 # Database: spark_connection
-    trip_id latitude longitude is_pickup BoroName  NTA2020 NTAName      MdHHIncE
-      &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;           &lt;int&gt;
- 1 40000000  40.7525  -73.9782         1 Manhattan MN0604  East Midtow…   161934
- 2 40000001  40.7269  -74.0035         1 Manhattan MN0201  SoHo-Little…   133847
- 3 40000002  40.7245  -74.0020         1 Manhattan MN0201  SoHo-Little…   133847
- 4 40000003  40.7622  -73.9791         1 Manhattan MN0502  Midtown-Tim…   153871
- 5 40000004  40.7436  -73.9943         1 Manhattan MN0401  Chelsea-Hud…   118915
- 6 40000005  40.7557  -73.9794         1 Manhattan MN0502  Midtown-Tim…   153871
- 7 40000006  40.7584  -73.9597         1 Manhattan MN0604  East Midtow…   161934
- 8 40000007  40.7514  -73.9737         1 Manhattan MN0603  Murray Hill…   138337
- 9 40000008  40.7620  -73.9788         1 Manhattan MN0502  Midtown-Tim…   153871
-10 40000009  40.7461  -73.9820         1 Manhattan MN0603  Murray Hill…   138337
-# ℹ more rows
-# ℹ 1 more variable: pop_density &lt;dbl&gt;</code></pre>
+    trip_id latitude longitude is_pickup BoroName  NTA2020 NTAName                         MdHHIncE
+      &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;chr&gt;     &lt;chr&gt;   &lt;chr&gt;                              &lt;int&gt;
+ 1 40000000     40.8     -74.0         1 Manhattan MN0604  East Midtown-Turtle Bay           161934
+ 2 40000001     40.7     -74.0         1 Manhattan MN0201  SoHo-Little Italy-Hudson Square   133847
+ 3 40000002     40.7     -74.0         1 Manhattan MN0201  SoHo-Little Italy-Hudson Square   133847
+ 4 40000003     40.8     -74.0         1 Manhattan MN0502  Midtown-Times Square              153871
+ 5 40000004     40.7     -74.0         1 Manhattan MN0401  Chelsea-Hudson Yards              118915
+ 6 40000005     40.8     -74.0         1 Manhattan MN0502  Midtown-Times Square              153871
+ 7 40000006     40.8     -74.0         1 Manhattan MN0604  East Midtown-Turtle Bay           161934
+ 8 40000007     40.8     -74.0         1 Manhattan MN0603  Murray Hill-Kips Bay              138337
+ 9 40000008     40.8     -74.0         1 Manhattan MN0502  Midtown-Times Square              153871
+10 40000009     40.7     -74.0         1 Manhattan MN0603  Murray Hill-Kips Bay              138337
+   pop_density
+         &lt;dbl&gt;
+ 1       4928.
+ 2      22022.
+ 3      14980.
+ 4      14246.
+ 5      37489.
+ 6       4928.
+ 7      41235.
+ 8      20680.
+ 9      14246.
+10      44076.
+# ℹ more rows</code></pre>
 </div>
 </div>
+<p>Perfect! We have successfully obtained approximate population density values for each pickup and dropoff location.</p>
 </section>
 <section id="saving-the-data" class="level2" data-number="4.5">
 <h2 data-number="4.5" class="anchored" data-anchor-id="saving-the-data"><span class="header-section-number">4.5</span> Saving the data</h2>
-<p>And finally save the data to file.</p>
+<p>Writing the updated data to file for further processing.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define file path for saving the updated dataframe</span></span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_two_file_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(</span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getwd</span>(), </span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"data"</span>, </span>
-<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"locations_sdf_updated_two"</span></span>
-<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the final dataframe as a Delta table</span></span>
-<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
-<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>  locations_sdf_updated_two,</span>
-<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> locations_sdf_updated_two_file_path,</span>
-<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">mode =</span> <span class="st">"append"</span>  <span class="co"># Overwrite any existing data at the location</span></span>
-<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define file path for saving the updated dataframe</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_two_file_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getwd</span>(), </span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"data"</span>, </span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"locations_sdf_updated_two"</span></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the final dataframe as a Delta table</span></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>  locations_sdf_updated_two,</span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> locations_sdf_updated_two_file_path,</span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">mode =</span> <span class="st">"append"</span>  <span class="co"># Overwrite any existing data at the location</span></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from the Spark session</span></span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from the Spark session</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+</section>
+<section id="references" class="level2" data-number="4.6">
+<h2 data-number="4.6" class="anchored" data-anchor-id="references"><span class="header-section-number">4.6</span> References</h2>
+<ul>
+<li>WorldPop (www.worldpop.org - School of Geography and Environmental Science, University of Southampton; Department of Geography and Geosciences, University of Louisville; Departement de Geographie, Universite de Namur) and Center for International Earth Science Information Network (CIESIN), Columbia University (2018). Global High Resolution Population Denominators Project - Funded by The Bill and Melinda Gates Foundation (OPP1134076). https://dx.doi.org/10.5258/SOTON/WP00675</li>
+</ul>
 
 
 <!-- -->
@@ -961,309 +983,317 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       </a>
   </div>
 </nav><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
-<div class="sourceCode" id="cb31" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Part One - Processing Raster Data with Apache Sedona and Sparklyr in R"</span></span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> "Using Raster Data to Determine Population Density Around Pickup and Dropoff Points"</span></span>
-<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span><span class="co"> </span></span>
-<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a><span class="co">  eval: true</span></span>
-<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a><span class="co">  output: true</span></span>
-<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a><span class="fu">## Introduction</span></span>
-<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>We are going to demonstrate how to obtain information from **raster files** based on coordinates in this chapter. Let us assume that there is a relationship between the **duration of a taxi ride** and the **population density** of an area. We will, therefore, need to extract population density values at each **pickup and dropoff location**. Such granular data is typically available in **raster format**, which is why we use **WorldPop population density data** with a resolution of **1 km by 1 km** for this purpose. You can download the data <span class="co">[</span><span class="ot">here</span><span class="co">](https://www.worldpop.org)</span> to follow along.</span>
-<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>The **Spark configuration** used for this chapter — and the next one — is **identical** to that used in **Chapter 2**, so it has **not been included below for brevity's sake**.</span>
-<span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-15"><a href="#cb31-15" aria-hidden="true" tabindex="-1"></a>Furthermore, because I need to **re-run this code multiple times** to render this website, I shall **filter only a few rows** from the **94 million** we previously worked with, as I will be constantly updating this site. **In the actual analysis I conducted, however, I used the full dataset.**</span>
-<span id="cb31-16"><a href="#cb31-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-17"><a href="#cb31-17" aria-hidden="true" tabindex="-1"></a>You can find out more about using **Apache Sedona for raster manipulation** <span class="co">[</span><span class="ot">here</span><span class="co">](https://sedona.apache.org)</span>.</span>
-<span id="cb31-18"><a href="#cb31-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-21"><a href="#cb31-21" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-22"><a href="#cb31-22" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
-<span id="cb31-23"><a href="#cb31-23" aria-hidden="true" tabindex="-1"></a><span class="co">#| output: false</span></span>
-<span id="cb31-24"><a href="#cb31-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-25"><a href="#cb31-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Load necessary libraries</span></span>
-<span id="cb31-26"><a href="#cb31-26" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(arrow)</span>
-<span id="cb31-27"><a href="#cb31-27" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sparklyr)   <span class="co"># Spark connection and interaction</span></span>
-<span id="cb31-28"><a href="#cb31-28" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)      <span class="co"># Data manipulation</span></span>
-<span id="cb31-29"><a href="#cb31-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-30"><a href="#cb31-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Install the specified version of Spark (3.5.5)</span></span>
-<span id="cb31-31"><a href="#cb31-31" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_install</span>(<span class="st">"3.5.5"</span>)</span>
-<span id="cb31-32"><a href="#cb31-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-33"><a href="#cb31-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Set environment variables for Java and Spark installation paths</span></span>
-<span id="cb31-34"><a href="#cb31-34" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"JAVA_HOME"</span><span class="ot">=</span><span class="st">"/Library/Java/JavaVirtualMachines/adoptopenjdk-11.jdk/Contents/Home"</span>)</span>
-<span id="cb31-35"><a href="#cb31-35" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"SPARK_HOME"</span><span class="ot">=</span><span class="fu">spark_home_dir</span>(<span class="at">version =</span> <span class="st">"3.5.5"</span>))</span>
-<span id="cb31-36"><a href="#cb31-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-37"><a href="#cb31-37" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the working directory</span></span>
-<span id="cb31-38"><a href="#cb31-38" aria-hidden="true" tabindex="-1"></a>working_dir <span class="ot">&lt;-</span> <span class="st">"/Users/rodgersiradukunda/Library/CloudStorage/OneDrive-TheUniversityofLiverpool/geospatial_docker"</span></span>
-<span id="cb31-39"><a href="#cb31-39" aria-hidden="true" tabindex="-1"></a><span class="fu">setwd</span>(working_dir)</span>
-<span id="cb31-40"><a href="#cb31-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-41"><a href="#cb31-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the path for Spark data</span></span>
-<span id="cb31-42"><a href="#cb31-42" aria-hidden="true" tabindex="-1"></a>spark_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"spark"</span>)</span>
-<span id="cb31-43"><a href="#cb31-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-44"><a href="#cb31-44" aria-hidden="true" tabindex="-1"></a><span class="co"># Create an empty list for Spark configuration settings</span></span>
-<span id="cb31-45"><a href="#cb31-45" aria-hidden="true" tabindex="-1"></a>config <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb31-46"><a href="#cb31-46" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-47"><a href="#cb31-47" aria-hidden="true" tabindex="-1"></a><span class="co"># Set Spark configurations for memory and performance optimisation</span></span>
-<span id="cb31-48"><a href="#cb31-48" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-49"><a href="#cb31-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Configure some delta specific options</span></span>
-<span id="cb31-50"><a href="#cb31-50" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.extensions <span class="ot">&lt;-</span> <span class="st">"io.delta.sql.DeltaSparkSessionExtension"</span></span>
-<span id="cb31-51"><a href="#cb31-51" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.catalog.spark_catalog <span class="ot">&lt;-</span> <span class="st">"org.apache.spark.sql.delta.catalog.DeltaCatalog"</span></span>
-<span id="cb31-52"><a href="#cb31-52" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-53"><a href="#cb31-53" aria-hidden="true" tabindex="-1"></a><span class="co"># Use KryoSerializer for better performance</span></span>
-<span id="cb31-54"><a href="#cb31-54" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.serializer <span class="ot">&lt;-</span> <span class="st">"org.apache.spark.serializer.KryoSerializer"</span>  </span>
-<span id="cb31-55"><a href="#cb31-55" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-56"><a href="#cb31-56" aria-hidden="true" tabindex="-1"></a><span class="co"># Set temporary directory for Spark</span></span>
-<span id="cb31-57"><a href="#cb31-57" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"-Djava.io.tmpdir="</span>, spark_dir)  </span>
-<span id="cb31-58"><a href="#cb31-58" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-59"><a href="#cb31-59" aria-hidden="true" tabindex="-1"></a><span class="co"># Use compressed Oops for JVM performance</span></span>
-<span id="cb31-60"><a href="#cb31-60" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">"-XX:+UseCompressedOops"</span>  </span>
-<span id="cb31-61"><a href="#cb31-61" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-62"><a href="#cb31-62" aria-hidden="true" tabindex="-1"></a><span class="co"># Allocate 8GB of memory for the Spark driver</span></span>
-<span id="cb31-63"><a href="#cb31-63" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-memory</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">'10G'</span>  </span>
-<span id="cb31-64"><a href="#cb31-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-65"><a href="#cb31-65" aria-hidden="true" tabindex="-1"></a><span class="co"># Set fraction of heap memory used for Spark storage</span></span>
-<span id="cb31-66"><a href="#cb31-66" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.fraction <span class="ot">&lt;-</span> <span class="fl">0.7</span>  </span>
-<span id="cb31-67"><a href="#cb31-67" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-68"><a href="#cb31-68" aria-hidden="true" tabindex="-1"></a><span class="co"># Set shuffle partitions (local setting based on workload)</span></span>
-<span id="cb31-69"><a href="#cb31-69" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.partitions.local <span class="ot">&lt;-</span> <span class="dv">24</span>  </span>
-<span id="cb31-70"><a href="#cb31-70" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-71"><a href="#cb31-71" aria-hidden="true" tabindex="-1"></a><span class="co"># Set extra memory for driver</span></span>
-<span id="cb31-72"><a href="#cb31-72" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.driver.extraJavaOptions <span class="ot">&lt;-</span> <span class="st">"-Xmx1G"</span>  </span>
-<span id="cb31-73"><a href="#cb31-73" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-74"><a href="#cb31-74" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable off-heap memory usage</span></span>
-<span id="cb31-75"><a href="#cb31-75" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span> </span>
-<span id="cb31-76"><a href="#cb31-76" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-77"><a href="#cb31-77" aria-hidden="true" tabindex="-1"></a><span class="co"># Set 4GB for off-heap memory</span></span>
-<span id="cb31-78"><a href="#cb31-78" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.size <span class="ot">&lt;-</span> <span class="st">"2g"</span>  </span>
-<span id="cb31-79"><a href="#cb31-79" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-80"><a href="#cb31-80" aria-hidden="true" tabindex="-1"></a><span class="co"># Disable shuffle spill to disk</span></span>
-<span id="cb31-81"><a href="#cb31-81" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.spill <span class="ot">&lt;-</span> <span class="st">"false"</span>  </span>
-<span id="cb31-82"><a href="#cb31-82" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-83"><a href="#cb31-83" aria-hidden="true" tabindex="-1"></a><span class="co"># Periodic garbage collection interval</span></span>
-<span id="cb31-84"><a href="#cb31-84" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.cleaner.periodicGC.interval <span class="ot">&lt;-</span> <span class="st">"60s"</span>  </span>
-<span id="cb31-85"><a href="#cb31-85" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-86"><a href="#cb31-86" aria-hidden="true" tabindex="-1"></a><span class="co"># Set max partition size for shuffle files</span></span>
-<span id="cb31-87"><a href="#cb31-87" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.files.maxPartitionBytes <span class="ot">&lt;-</span> <span class="st">"200m"</span>  </span>
-<span id="cb31-88"><a href="#cb31-88" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-89"><a href="#cb31-89" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable adaptive query execution</span></span>
-<span id="cb31-90"><a href="#cb31-90" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.adaptive.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span> </span>
-<span id="cb31-91"><a href="#cb31-91" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-92"><a href="#cb31-92" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-93"><a href="#cb31-93" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect to Spark using the specified configuration</span></span>
-<span id="cb31-94"><a href="#cb31-94" aria-hidden="true" tabindex="-1"></a>sc <span class="ot">&lt;-</span> <span class="fu">spark_connect</span>(</span>
-<span id="cb31-95"><a href="#cb31-95" aria-hidden="true" tabindex="-1"></a>  <span class="at">master =</span> <span class="st">"local[*]"</span>,  <span class="co"># Run locally on all cores</span></span>
-<span id="cb31-96"><a href="#cb31-96" aria-hidden="true" tabindex="-1"></a>  <span class="at">config =</span> config,  <span class="co"># Apply the custom configuration</span></span>
-<span id="cb31-97"><a href="#cb31-97" aria-hidden="true" tabindex="-1"></a>  <span class="at">packages =</span> <span class="fu">c</span>(</span>
-<span id="cb31-98"><a href="#cb31-98" aria-hidden="true" tabindex="-1"></a>    <span class="st">"io.delta:delta-spark_2.12:3.3.0"</span>,   <span class="co"># Delta Lake Spark package</span></span>
-<span id="cb31-99"><a href="#cb31-99" aria-hidden="true" tabindex="-1"></a>    <span class="st">"org.apache.sedona:sedona-spark-shaded-3.5_2.12:1.7.0"</span>,  <span class="co"># Apache Sedona for geospatial processing</span></span>
-<span id="cb31-100"><a href="#cb31-100" aria-hidden="true" tabindex="-1"></a>    <span class="st">"org.datasyslab:geotools-wrapper:1.7.0-28.5"</span>  <span class="co"># GeoTools wrapper for geospatial processing</span></span>
-<span id="cb31-101"><a href="#cb31-101" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb31-102"><a href="#cb31-102" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb31-103"><a href="#cb31-103" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-104"><a href="#cb31-104" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the Apache Sedona package</span></span>
-<span id="cb31-105"><a href="#cb31-105" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(apache.sedona)</span>
-<span id="cb31-106"><a href="#cb31-106" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-107"><a href="#cb31-107" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize Sedona context for R</span></span>
-<span id="cb31-108"><a href="#cb31-108" aria-hidden="true" tabindex="-1"></a><span class="fu">invoke_static</span>(</span>
-<span id="cb31-109"><a href="#cb31-109" aria-hidden="true" tabindex="-1"></a>  sc,</span>
-<span id="cb31-110"><a href="#cb31-110" aria-hidden="true" tabindex="-1"></a>  <span class="st">"org.apache.sedona.spark.SedonaContext"</span>,</span>
-<span id="cb31-111"><a href="#cb31-111" aria-hidden="true" tabindex="-1"></a>  <span class="st">"create"</span>,</span>
-<span id="cb31-112"><a href="#cb31-112" aria-hidden="true" tabindex="-1"></a>  <span class="fu">spark_session</span>(sc),</span>
-<span id="cb31-113"><a href="#cb31-113" aria-hidden="true" tabindex="-1"></a>  <span class="st">"r"</span></span>
-<span id="cb31-114"><a href="#cb31-114" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb31-115"><a href="#cb31-115" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-116"><a href="#cb31-116" aria-hidden="true" tabindex="-1"></a><span class="co"># Start Spark's web UI for monitoring</span></span>
-<span id="cb31-117"><a href="#cb31-117" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_web</span>(sc)</span>
-<span id="cb31-118"><a href="#cb31-118" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-119"><a href="#cb31-119" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-120"><a href="#cb31-120" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-121"><a href="#cb31-121" aria-hidden="true" tabindex="-1"></a><span class="fu">## Loading updated locations data</span></span>
-<span id="cb31-122"><a href="#cb31-122" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-123"><a href="#cb31-123" aria-hidden="true" tabindex="-1"></a>We start by **loading our updated locations data**, which now contains **household median income by neighbourhood** information.</span>
-<span id="cb31-124"><a href="#cb31-124" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-125"><a href="#cb31-125" aria-hidden="true" tabindex="-1"></a>To reiterate, I will **filter for about 14 million rows** here so that I can **render this webpage faster**. However, sometimes in your analysis, you will find that you have **too much data and limited memory**, especially when running **complex transformations**.</span>
-<span id="cb31-126"><a href="#cb31-126" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-127"><a href="#cb31-127" aria-hidden="true" tabindex="-1"></a>In such cases, you can **filter for specific rows**, perform your analysis on that subset, and then **append the results to your delta tables**. You can repeat this process for another set of rows until you are done.</span>
-<span id="cb31-128"><a href="#cb31-128" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-129"><a href="#cb31-129" aria-hidden="true" tabindex="-1"></a>For instance, knowing that I have **trip ID values ranging from 0 to about 48,000,000**, I would:</span>
-<span id="cb31-130"><a href="#cb31-130" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-131"><a href="#cb31-131" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>First filter for rows between **0 and 16 million**,\</span>
-<span id="cb31-132"><a href="#cb31-132" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Then **16 million to 32 million**,\</span>
-<span id="cb31-133"><a href="#cb31-133" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>And finally, anything **above 32 million**,\</span>
-<span id="cb31-134"><a href="#cb31-134" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>**Appending to the same folder** each time.</span>
-<span id="cb31-135"><a href="#cb31-135" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-136"><a href="#cb31-136" aria-hidden="true" tabindex="-1"></a>If you have **enough RAM and cores**, though, **feel free to run everything at once** — go crazy with it!</span>
-<span id="cb31-137"><a href="#cb31-137" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-140"><a href="#cb31-140" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-141"><a href="#cb31-141" aria-hidden="true" tabindex="-1"></a><span class="co"># Define path to the updated locations Delta table</span></span>
-<span id="cb31-142"><a href="#cb31-142" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_one <span class="ot">&lt;-</span> <span class="fu">spark_read_delta</span>(</span>
-<span id="cb31-143"><a href="#cb31-143" aria-hidden="true" tabindex="-1"></a>  sc,</span>
-<span id="cb31-144"><a href="#cb31-144" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> <span class="fu">file.path</span>(</span>
-<span id="cb31-145"><a href="#cb31-145" aria-hidden="true" tabindex="-1"></a>    <span class="fu">getwd</span>(), </span>
-<span id="cb31-146"><a href="#cb31-146" aria-hidden="true" tabindex="-1"></a>    <span class="st">"data"</span>, </span>
-<span id="cb31-147"><a href="#cb31-147" aria-hidden="true" tabindex="-1"></a>    <span class="st">"locations_sdf_updated_one"</span></span>
-<span id="cb31-148"><a href="#cb31-148" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb31-149"><a href="#cb31-149" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span> </span>
-<span id="cb31-150"><a href="#cb31-150" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(trip_id <span class="sc">&gt;=</span> <span class="dv">40000000</span> <span class="sc">&amp;</span> trip_id <span class="sc">&lt;=</span> <span class="dv">40000010</span>) <span class="sc">%&gt;%</span> <span class="co"># Filter for only ten rows</span></span>
-<span id="cb31-151"><a href="#cb31-151" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sdf_register</span>(<span class="st">"locations_sdf_updated_one_view"</span>)  <span class="co"># Register as a temporary view</span></span>
-<span id="cb31-152"><a href="#cb31-152" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-153"><a href="#cb31-153" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-154"><a href="#cb31-154" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-157"><a href="#cb31-157" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-158"><a href="#cb31-158" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(locations_sdf_updated_one, <span class="at">width=</span><span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span>
-<span id="cb31-159"><a href="#cb31-159" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-160"><a href="#cb31-160" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-161"><a href="#cb31-161" aria-hidden="true" tabindex="-1"></a><span class="fu">## Loading WorldPop Population Density dataset</span></span>
-<span id="cb31-162"><a href="#cb31-162" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-163"><a href="#cb31-163" aria-hidden="true" tabindex="-1"></a>The difference when using **raster data** compared to vector data with **Apache Sedona** is that we **do not import raster in its native format directly**. Instead, we must **first load it as a binary dataframe**, and **then convert it into its native raster format** within Sedona.</span>
-<span id="cb31-164"><a href="#cb31-164" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-165"><a href="#cb31-165" aria-hidden="true" tabindex="-1"></a>Also, **bear in mind** that **Sedona only accepts raster files** in the following formats:\</span>
-<span id="cb31-166"><a href="#cb31-166" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Arc Info ASCII Grid**,\</span>
-<span id="cb31-167"><a href="#cb31-167" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**GeoTIFF**, and\</span>
-<span id="cb31-168"><a href="#cb31-168" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**NetCDF**.</span>
-<span id="cb31-169"><a href="#cb31-169" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-170"><a href="#cb31-170" aria-hidden="true" tabindex="-1"></a>If your data is in **any other raster format**, you will first need to **convert it to one of these supported formats**.</span>
-<span id="cb31-171"><a href="#cb31-171" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-172"><a href="#cb31-172" aria-hidden="true" tabindex="-1"></a>I have found **GDAL** to be **particularly useful for converting between different raster formats** — definitely a tool to keep in your geospatial toolbox!</span>
-<span id="cb31-173"><a href="#cb31-173" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-176"><a href="#cb31-176" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-177"><a href="#cb31-177" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the raster data for world population (NYC)</span></span>
-<span id="cb31-178"><a href="#cb31-178" aria-hidden="true" tabindex="-1"></a>world_pop_raster_filepath <span class="ot">&lt;-</span> <span class="fu">file.path</span>(</span>
-<span id="cb31-179"><a href="#cb31-179" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getwd</span>(),</span>
-<span id="cb31-180"><a href="#cb31-180" aria-hidden="true" tabindex="-1"></a>  <span class="st">"data"</span>,</span>
-<span id="cb31-181"><a href="#cb31-181" aria-hidden="true" tabindex="-1"></a>  <span class="st">"raster"</span>,</span>
-<span id="cb31-182"><a href="#cb31-182" aria-hidden="true" tabindex="-1"></a>  <span class="st">"worldpop"</span>,</span>
-<span id="cb31-183"><a href="#cb31-183" aria-hidden="true" tabindex="-1"></a>  <span class="st">"nyc.tif"</span></span>
-<span id="cb31-184"><a href="#cb31-184" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb31-185"><a href="#cb31-185" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-186"><a href="#cb31-186" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-189"><a href="#cb31-189" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-190"><a href="#cb31-190" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the raster data as a binary file</span></span>
-<span id="cb31-191"><a href="#cb31-191" aria-hidden="true" tabindex="-1"></a>world_pop_binary <span class="ot">&lt;-</span> <span class="fu">spark_read_binary</span>(</span>
-<span id="cb31-192"><a href="#cb31-192" aria-hidden="true" tabindex="-1"></a>  sc,</span>
-<span id="cb31-193"><a href="#cb31-193" aria-hidden="true" tabindex="-1"></a>  <span class="at">dir =</span> world_pop_raster_filepath,</span>
-<span id="cb31-194"><a href="#cb31-194" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"worldpop"</span></span>
-<span id="cb31-195"><a href="#cb31-195" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb31-196"><a href="#cb31-196" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-197"><a href="#cb31-197" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-198"><a href="#cb31-198" aria-hidden="true" tabindex="-1"></a>We obtain raster geometry from our GeoTiff data.</span>
-<span id="cb31-199"><a href="#cb31-199" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-202"><a href="#cb31-202" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-203"><a href="#cb31-203" aria-hidden="true" tabindex="-1"></a><span class="co"># Register the world population raster as a temporary view</span></span>
-<span id="cb31-204"><a href="#cb31-204" aria-hidden="true" tabindex="-1"></a>world_pop_binary <span class="sc">|&gt;</span> <span class="fu">sdf_register</span>(<span class="st">"worldpop_view"</span>)</span>
-<span id="cb31-205"><a href="#cb31-205" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-206"><a href="#cb31-206" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract raster data from the GeoTiff file using Sedona</span></span>
-<span id="cb31-207"><a href="#cb31-207" aria-hidden="true" tabindex="-1"></a>worldpop_sdf <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
-<span id="cb31-208"><a href="#cb31-208" aria-hidden="true" tabindex="-1"></a>  sc,</span>
-<span id="cb31-209"><a href="#cb31-209" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
-<span id="cb31-210"><a href="#cb31-210" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT RS_FromGeoTiff(content) AS raster FROM worldpop_view</span></span>
-<span id="cb31-211"><a href="#cb31-211" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
-<span id="cb31-212"><a href="#cb31-212" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb31-213"><a href="#cb31-213" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-214"><a href="#cb31-214" aria-hidden="true" tabindex="-1"></a><span class="co"># Register the raster data as a temporary view</span></span>
-<span id="cb31-215"><a href="#cb31-215" aria-hidden="true" tabindex="-1"></a>worldpop_sdf <span class="sc">|&gt;</span> <span class="fu">sdf_register</span>(<span class="st">"worldpop_view"</span>) <span class="sc">|&gt;</span> <span class="fu">compute</span>()</span>
-<span id="cb31-216"><a href="#cb31-216" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-217"><a href="#cb31-217" aria-hidden="true" tabindex="-1"></a>worldpop_sdf <span class="sc">%&gt;%</span> <span class="fu">glimpse</span>()</span>
-<span id="cb31-218"><a href="#cb31-218" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-219"><a href="#cb31-219" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-220"><a href="#cb31-220" aria-hidden="true" tabindex="-1"></a>We can **retrieve metadata** from our raster file, including:\</span>
-<span id="cb31-221"><a href="#cb31-221" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The **upper left coordinates** of the raster (in the raster’s coordinate system units),\</span>
-<span id="cb31-222"><a href="#cb31-222" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The **width and height** of the raster (in number of pixels),\</span>
-<span id="cb31-223"><a href="#cb31-223" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The **spatial resolution** of each pixel (in units of the raster’s CRS),\</span>
-<span id="cb31-224"><a href="#cb31-224" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Any **skew or rotation** of the raster (if present),\</span>
-<span id="cb31-225"><a href="#cb31-225" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The **SRID** (spatial reference system identifier) of the raster’s coordinate system,\</span>
-<span id="cb31-226"><a href="#cb31-226" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The **number of bands**, and\</span>
-<span id="cb31-227"><a href="#cb31-227" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Tile width and height**.</span>
-<span id="cb31-228"><a href="#cb31-228" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-229"><a href="#cb31-229" aria-hidden="true" tabindex="-1"></a>In our case:\</span>
-<span id="cb31-230"><a href="#cb31-230" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Upper left X coordinate**: <span class="in">`-74.25125`</span>\</span>
-<span id="cb31-231"><a href="#cb31-231" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Upper left Y coordinate**: <span class="in">`40.90792`</span> (both in degrees as the CRS is WGS84)\</span>
-<span id="cb31-232"><a href="#cb31-232" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Raster size**: <span class="in">`66 x 49`</span> pixels (quite small)\</span>
-<span id="cb31-233"><a href="#cb31-233" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Pixel resolution**: <span class="in">`0.00833 x -0.00833`</span> degrees\</span>
-<span id="cb31-234"><a href="#cb31-234" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Skew**: <span class="in">`0`</span> in both x and y directions (i.e., no skew)\</span>
-<span id="cb31-235"><a href="#cb31-235" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**SRID**: <span class="in">`4326`</span> (WGS 84)\</span>
-<span id="cb31-236"><a href="#cb31-236" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Number of bands**: <span class="in">`2`</span>\</span>
-<span id="cb31-237"><a href="#cb31-237" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Tile width**: `66`, **Tile height**: <span class="in">`15`</span></span>
-<span id="cb31-238"><a href="#cb31-238" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-239"><a href="#cb31-239" aria-hidden="true" tabindex="-1"></a>All this information is important when **interpreting and working with raster data**, especially when performing **coordinate-based queries**.</span>
-<span id="cb31-240"><a href="#cb31-240" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-243"><a href="#cb31-243" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-244"><a href="#cb31-244" aria-hidden="true" tabindex="-1"></a><span class="co"># Retrieve and view metadata for the world population raster</span></span>
-<span id="cb31-245"><a href="#cb31-245" aria-hidden="true" tabindex="-1"></a>worldpop_sdf_metadata <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
-<span id="cb31-246"><a href="#cb31-246" aria-hidden="true" tabindex="-1"></a>  sc,</span>
-<span id="cb31-247"><a href="#cb31-247" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
-<span id="cb31-248"><a href="#cb31-248" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT RS_MetaData(raster) FROM worldpop_view</span></span>
-<span id="cb31-249"><a href="#cb31-249" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
-<span id="cb31-250"><a href="#cb31-250" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span> <span class="fu">collect</span>()</span>
-<span id="cb31-251"><a href="#cb31-251" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-252"><a href="#cb31-252" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-255"><a href="#cb31-255" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-256"><a href="#cb31-256" aria-hidden="true" tabindex="-1"></a><span class="co"># Glimpse at the metadata information</span></span>
-<span id="cb31-257"><a href="#cb31-257" aria-hidden="true" tabindex="-1"></a>worldpop_sdf_metadata <span class="sc">|&gt;</span> <span class="fu">glimpse</span>()</span>
-<span id="cb31-258"><a href="#cb31-258" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-259"><a href="#cb31-259" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-260"><a href="#cb31-260" aria-hidden="true" tabindex="-1"></a><span class="fu">## Joining point data with raster data</span></span>
-<span id="cb31-261"><a href="#cb31-261" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-262"><a href="#cb31-262" aria-hidden="true" tabindex="-1"></a>We now **conduct the join using Spatial SQL**, as it is much easier and more intuitive than using Apache Sedona's R functions for raster operations.</span>
-<span id="cb31-263"><a href="#cb31-263" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-264"><a href="#cb31-264" aria-hidden="true" tabindex="-1"></a>By leveraging **Spatial SQL**, we can directly query raster values at specific pickup and dropoff coordinates, simplifying what would otherwise be a more complex process if done via function-based syntax.</span>
-<span id="cb31-265"><a href="#cb31-265" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-268"><a href="#cb31-268" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-269"><a href="#cb31-269" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform a spatial join between the locations and the world population data to calculate population density</span></span>
-<span id="cb31-270"><a href="#cb31-270" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_two <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
-<span id="cb31-271"><a href="#cb31-271" aria-hidden="true" tabindex="-1"></a>  sc,</span>
-<span id="cb31-272"><a href="#cb31-272" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
-<span id="cb31-273"><a href="#cb31-273" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT </span></span>
-<span id="cb31-274"><a href="#cb31-274" aria-hidden="true" tabindex="-1"></a><span class="st">    /*+ BROADCAST(w) */ l.*, RS_Value(w.raster, ST_Point(l.longitude, l.latitude)) AS pop_density</span></span>
-<span id="cb31-275"><a href="#cb31-275" aria-hidden="true" tabindex="-1"></a><span class="st">  FROM</span></span>
-<span id="cb31-276"><a href="#cb31-276" aria-hidden="true" tabindex="-1"></a><span class="st">    locations_sdf_updated_one_view l</span></span>
-<span id="cb31-277"><a href="#cb31-277" aria-hidden="true" tabindex="-1"></a><span class="st">  LEFT JOIN worldpop_view w</span></span>
-<span id="cb31-278"><a href="#cb31-278" aria-hidden="true" tabindex="-1"></a><span class="st">    ON RS_Intersects(w.raster, ST_POINT(l.longitude, l.latitude))</span></span>
-<span id="cb31-279"><a href="#cb31-279" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
-<span id="cb31-280"><a href="#cb31-280" aria-hidden="true" tabindex="-1"></a>) </span>
-<span id="cb31-281"><a href="#cb31-281" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-282"><a href="#cb31-282" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-283"><a href="#cb31-283" aria-hidden="true" tabindex="-1"></a>We can now take a look at the result of our join below.</span>
-<span id="cb31-284"><a href="#cb31-284" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-287"><a href="#cb31-287" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-288"><a href="#cb31-288" aria-hidden="true" tabindex="-1"></a><span class="co"># Glimpse at the updated data with population density</span></span>
-<span id="cb31-289"><a href="#cb31-289" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_two <span class="sc">%&gt;%</span> <span class="fu">glimpse</span>()</span>
-<span id="cb31-290"><a href="#cb31-290" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-291"><a href="#cb31-291" aria-hidden="true" tabindex="-1"></a><span class="co"># Print a preview of the resulting dataframe with specific formatting options</span></span>
-<span id="cb31-292"><a href="#cb31-292" aria-hidden="true" tabindex="-1"></a>withr<span class="sc">::</span><span class="fu">with_options</span>(</span>
-<span id="cb31-293"><a href="#cb31-293" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">pillar.sigfig =</span> <span class="dv">6</span>),</span>
-<span id="cb31-294"><a href="#cb31-294" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(locations_sdf_updated_two, <span class="at">n=</span><span class="dv">10</span>)</span>
-<span id="cb31-295"><a href="#cb31-295" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb31-296"><a href="#cb31-296" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-297"><a href="#cb31-297" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-298"><a href="#cb31-298" aria-hidden="true" tabindex="-1"></a><span class="fu">## Saving the data</span></span>
-<span id="cb31-299"><a href="#cb31-299" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-300"><a href="#cb31-300" aria-hidden="true" tabindex="-1"></a>And finally save the data to file.</span>
-<span id="cb31-301"><a href="#cb31-301" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-304"><a href="#cb31-304" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-305"><a href="#cb31-305" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
-<span id="cb31-306"><a href="#cb31-306" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-307"><a href="#cb31-307" aria-hidden="true" tabindex="-1"></a><span class="co"># Define file path for saving the updated dataframe</span></span>
-<span id="cb31-308"><a href="#cb31-308" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_two_file_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(</span>
-<span id="cb31-309"><a href="#cb31-309" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getwd</span>(), </span>
-<span id="cb31-310"><a href="#cb31-310" aria-hidden="true" tabindex="-1"></a>  <span class="st">"data"</span>, </span>
-<span id="cb31-311"><a href="#cb31-311" aria-hidden="true" tabindex="-1"></a>  <span class="st">"locations_sdf_updated_two"</span></span>
-<span id="cb31-312"><a href="#cb31-312" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb31-313"><a href="#cb31-313" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-314"><a href="#cb31-314" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the final dataframe as a Delta table</span></span>
-<span id="cb31-315"><a href="#cb31-315" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
-<span id="cb31-316"><a href="#cb31-316" aria-hidden="true" tabindex="-1"></a>  locations_sdf_updated_two,</span>
-<span id="cb31-317"><a href="#cb31-317" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> locations_sdf_updated_two_file_path,</span>
-<span id="cb31-318"><a href="#cb31-318" aria-hidden="true" tabindex="-1"></a>  <span class="at">mode =</span> <span class="st">"append"</span>  <span class="co"># Overwrite any existing data at the location</span></span>
-<span id="cb31-319"><a href="#cb31-319" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb31-320"><a href="#cb31-320" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb31-321"><a href="#cb31-321" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-324"><a href="#cb31-324" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb31-325"><a href="#cb31-325" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from the Spark session</span></span>
-<span id="cb31-326"><a href="#cb31-326" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span>
-<span id="cb31-327"><a href="#cb31-327" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<div class="sourceCode" id="cb32" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Part One - Processing Raster Data with Apache Sedona and Sparklyr in R"</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> "Using WorldPop Data to Determine Population Density Around Pickup and Dropoff Points"</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span><span class="co"> </span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a><span class="co">  eval: true</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a><span class="co">  output: true</span></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a><span class="fu">## Introduction</span></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>In this chapter, we are going to demonstrate how to obtain information from raster files based on geographic coordinates. Let us assume that there is a relationship between the duration of a taxi (dependent variable) ride and the population density of an area. We will, therefore, need to extract population density values at each pickup and dropoff location. Such granular data is typically available in **raster format**, which is why we use **WorldPop population density data** with a resolution of **1 km by 1 km** for this purpose. You can download the data <span class="co">[</span><span class="ot">here</span><span class="co">](https://data.worldpop.org/GIS/Population_Density/Global_2000_2020_1km_UNadj/2016/USA/usa_pd_2016_1km_UNadj.tif)</span> to follow along.</span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>The Spark configuration used in this chapter — and the next one — is identical to the one used in Chapter 3, so it is not shown below for brevity's sake.</span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>Furthermore, because I need to re-run this code multiple times to render this website, I shall filter only a few rows from the 94 million we previously worked with, as I will be constantly updating this site. In the actual analysis I conducted, however, I used the full dataset.</span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a>You can find out more about using Apache Sedona for raster manipulation <span class="co">[</span><span class="ot">here</span><span class="co">](https://sedona.apache.org/1.4.1/api/rdocs/articles/raster.html)</span>.</span>
+<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-21"><a href="#cb32-21" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb32-22"><a href="#cb32-22" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
+<span id="cb32-23"><a href="#cb32-23" aria-hidden="true" tabindex="-1"></a><span class="co">#| output: false</span></span>
+<span id="cb32-24"><a href="#cb32-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-25"><a href="#cb32-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Load necessary libraries</span></span>
+<span id="cb32-26"><a href="#cb32-26" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(arrow)</span>
+<span id="cb32-27"><a href="#cb32-27" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sparklyr)   <span class="co"># Spark connection and interaction</span></span>
+<span id="cb32-28"><a href="#cb32-28" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)      <span class="co"># Data manipulation</span></span>
+<span id="cb32-29"><a href="#cb32-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-30"><a href="#cb32-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Install the specified version of Spark (3.5.5)</span></span>
+<span id="cb32-31"><a href="#cb32-31" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_install</span>(<span class="st">"3.5.5"</span>)</span>
+<span id="cb32-32"><a href="#cb32-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-33"><a href="#cb32-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Set environment variables for Java and Spark installation paths</span></span>
+<span id="cb32-34"><a href="#cb32-34" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"JAVA_HOME"</span><span class="ot">=</span><span class="st">"/Library/Java/JavaVirtualMachines/adoptopenjdk-11.jdk/Contents/Home"</span>)</span>
+<span id="cb32-35"><a href="#cb32-35" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="st">"SPARK_HOME"</span><span class="ot">=</span><span class="fu">spark_home_dir</span>(<span class="at">version =</span> <span class="st">"3.5.5"</span>))</span>
+<span id="cb32-36"><a href="#cb32-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-37"><a href="#cb32-37" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the working directory</span></span>
+<span id="cb32-38"><a href="#cb32-38" aria-hidden="true" tabindex="-1"></a>working_dir <span class="ot">&lt;-</span> <span class="st">"/Users/rodgersiradukunda/Library/CloudStorage/OneDrive-TheUniversityofLiverpool/geospatial_docker"</span></span>
+<span id="cb32-39"><a href="#cb32-39" aria-hidden="true" tabindex="-1"></a><span class="fu">setwd</span>(working_dir)</span>
+<span id="cb32-40"><a href="#cb32-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-41"><a href="#cb32-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the path for Spark data</span></span>
+<span id="cb32-42"><a href="#cb32-42" aria-hidden="true" tabindex="-1"></a>spark_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"spark"</span>)</span>
+<span id="cb32-43"><a href="#cb32-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-44"><a href="#cb32-44" aria-hidden="true" tabindex="-1"></a><span class="co"># Create an empty list for Spark configuration settings</span></span>
+<span id="cb32-45"><a href="#cb32-45" aria-hidden="true" tabindex="-1"></a>config <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb32-46"><a href="#cb32-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-47"><a href="#cb32-47" aria-hidden="true" tabindex="-1"></a><span class="co"># Set Spark configurations for memory and performance optimisation</span></span>
+<span id="cb32-48"><a href="#cb32-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-49"><a href="#cb32-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Configure some delta specific options</span></span>
+<span id="cb32-50"><a href="#cb32-50" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.extensions <span class="ot">&lt;-</span> <span class="st">"io.delta.sql.DeltaSparkSessionExtension"</span></span>
+<span id="cb32-51"><a href="#cb32-51" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.catalog.spark_catalog <span class="ot">&lt;-</span> <span class="st">"org.apache.spark.sql.delta.catalog.DeltaCatalog"</span></span>
+<span id="cb32-52"><a href="#cb32-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-53"><a href="#cb32-53" aria-hidden="true" tabindex="-1"></a><span class="co"># Use KryoSerializer for better performance</span></span>
+<span id="cb32-54"><a href="#cb32-54" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.serializer <span class="ot">&lt;-</span> <span class="st">"org.apache.spark.serializer.KryoSerializer"</span>  </span>
+<span id="cb32-55"><a href="#cb32-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-56"><a href="#cb32-56" aria-hidden="true" tabindex="-1"></a><span class="co"># Set temporary directory for Spark</span></span>
+<span id="cb32-57"><a href="#cb32-57" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"-Djava.io.tmpdir="</span>, spark_dir)  </span>
+<span id="cb32-58"><a href="#cb32-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-59"><a href="#cb32-59" aria-hidden="true" tabindex="-1"></a><span class="co"># Use compressed Oops for JVM performance</span></span>
+<span id="cb32-60"><a href="#cb32-60" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-java-options</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">"-XX:+UseCompressedOops"</span>  </span>
+<span id="cb32-61"><a href="#cb32-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-62"><a href="#cb32-62" aria-hidden="true" tabindex="-1"></a><span class="co"># Allocate 8GB of memory for the Spark driver</span></span>
+<span id="cb32-63"><a href="#cb32-63" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span><span class="st">`</span><span class="at">sparklyr.shell.driver-memory</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="st">'10G'</span>  </span>
+<span id="cb32-64"><a href="#cb32-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-65"><a href="#cb32-65" aria-hidden="true" tabindex="-1"></a><span class="co"># Set fraction of heap memory used for Spark storage</span></span>
+<span id="cb32-66"><a href="#cb32-66" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.fraction <span class="ot">&lt;-</span> <span class="fl">0.7</span>  </span>
+<span id="cb32-67"><a href="#cb32-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-68"><a href="#cb32-68" aria-hidden="true" tabindex="-1"></a><span class="co"># Set shuffle partitions (local setting based on workload)</span></span>
+<span id="cb32-69"><a href="#cb32-69" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.partitions.local <span class="ot">&lt;-</span> <span class="dv">24</span>  </span>
+<span id="cb32-70"><a href="#cb32-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-71"><a href="#cb32-71" aria-hidden="true" tabindex="-1"></a><span class="co"># Set extra memory for driver</span></span>
+<span id="cb32-72"><a href="#cb32-72" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.driver.extraJavaOptions <span class="ot">&lt;-</span> <span class="st">"-Xmx1G"</span>  </span>
+<span id="cb32-73"><a href="#cb32-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-74"><a href="#cb32-74" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable off-heap memory usage</span></span>
+<span id="cb32-75"><a href="#cb32-75" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span> </span>
+<span id="cb32-76"><a href="#cb32-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-77"><a href="#cb32-77" aria-hidden="true" tabindex="-1"></a><span class="co"># Set 4GB for off-heap memory</span></span>
+<span id="cb32-78"><a href="#cb32-78" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.memory.offHeap.size <span class="ot">&lt;-</span> <span class="st">"2g"</span>  </span>
+<span id="cb32-79"><a href="#cb32-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-80"><a href="#cb32-80" aria-hidden="true" tabindex="-1"></a><span class="co"># Disable shuffle spill to disk</span></span>
+<span id="cb32-81"><a href="#cb32-81" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.shuffle.spill <span class="ot">&lt;-</span> <span class="st">"false"</span>  </span>
+<span id="cb32-82"><a href="#cb32-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-83"><a href="#cb32-83" aria-hidden="true" tabindex="-1"></a><span class="co"># Periodic garbage collection interval</span></span>
+<span id="cb32-84"><a href="#cb32-84" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.cleaner.periodicGC.interval <span class="ot">&lt;-</span> <span class="st">"60s"</span>  </span>
+<span id="cb32-85"><a href="#cb32-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-86"><a href="#cb32-86" aria-hidden="true" tabindex="-1"></a><span class="co"># Set max partition size for shuffle files</span></span>
+<span id="cb32-87"><a href="#cb32-87" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.files.maxPartitionBytes <span class="ot">&lt;-</span> <span class="st">"200m"</span>  </span>
+<span id="cb32-88"><a href="#cb32-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-89"><a href="#cb32-89" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable adaptive query execution</span></span>
+<span id="cb32-90"><a href="#cb32-90" aria-hidden="true" tabindex="-1"></a>config<span class="sc">$</span>spark.sql.adaptive.enabled <span class="ot">&lt;-</span> <span class="st">"true"</span> </span>
+<span id="cb32-91"><a href="#cb32-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-92"><a href="#cb32-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-93"><a href="#cb32-93" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect to Spark using the specified configuration</span></span>
+<span id="cb32-94"><a href="#cb32-94" aria-hidden="true" tabindex="-1"></a>sc <span class="ot">&lt;-</span> <span class="fu">spark_connect</span>(</span>
+<span id="cb32-95"><a href="#cb32-95" aria-hidden="true" tabindex="-1"></a>  <span class="at">master =</span> <span class="st">"local[*]"</span>,  <span class="co"># Run locally on all cores</span></span>
+<span id="cb32-96"><a href="#cb32-96" aria-hidden="true" tabindex="-1"></a>  <span class="at">config =</span> config,  <span class="co"># Apply the custom configuration</span></span>
+<span id="cb32-97"><a href="#cb32-97" aria-hidden="true" tabindex="-1"></a>  <span class="at">packages =</span> <span class="fu">c</span>(</span>
+<span id="cb32-98"><a href="#cb32-98" aria-hidden="true" tabindex="-1"></a>    <span class="st">"io.delta:delta-spark_2.12:3.3.0"</span>,   <span class="co"># Delta Lake Spark package</span></span>
+<span id="cb32-99"><a href="#cb32-99" aria-hidden="true" tabindex="-1"></a>    <span class="st">"org.apache.sedona:sedona-spark-shaded-3.5_2.12:1.7.0"</span>,  <span class="co"># Apache Sedona for geospatial processing</span></span>
+<span id="cb32-100"><a href="#cb32-100" aria-hidden="true" tabindex="-1"></a>    <span class="st">"org.datasyslab:geotools-wrapper:1.7.0-28.5"</span>  <span class="co"># GeoTools wrapper for geospatial processing</span></span>
+<span id="cb32-101"><a href="#cb32-101" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb32-102"><a href="#cb32-102" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-103"><a href="#cb32-103" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-104"><a href="#cb32-104" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the Apache Sedona package</span></span>
+<span id="cb32-105"><a href="#cb32-105" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(apache.sedona)</span>
+<span id="cb32-106"><a href="#cb32-106" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-107"><a href="#cb32-107" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize Sedona context for R</span></span>
+<span id="cb32-108"><a href="#cb32-108" aria-hidden="true" tabindex="-1"></a><span class="fu">invoke_static</span>(</span>
+<span id="cb32-109"><a href="#cb32-109" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb32-110"><a href="#cb32-110" aria-hidden="true" tabindex="-1"></a>  <span class="st">"org.apache.sedona.spark.SedonaContext"</span>,</span>
+<span id="cb32-111"><a href="#cb32-111" aria-hidden="true" tabindex="-1"></a>  <span class="st">"create"</span>,</span>
+<span id="cb32-112"><a href="#cb32-112" aria-hidden="true" tabindex="-1"></a>  <span class="fu">spark_session</span>(sc),</span>
+<span id="cb32-113"><a href="#cb32-113" aria-hidden="true" tabindex="-1"></a>  <span class="st">"r"</span></span>
+<span id="cb32-114"><a href="#cb32-114" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-115"><a href="#cb32-115" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb32-116"><a href="#cb32-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-117"><a href="#cb32-117" aria-hidden="true" tabindex="-1"></a><span class="fu">## Loading updated locations data</span></span>
+<span id="cb32-118"><a href="#cb32-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-119"><a href="#cb32-119" aria-hidden="true" tabindex="-1"></a>We start by loading our updated locations data, which now contains household median income by neighbourhood information.</span>
+<span id="cb32-120"><a href="#cb32-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-121"><a href="#cb32-121" aria-hidden="true" tabindex="-1"></a>To reiterate, I will filter for a few rows here so that I can render this webpage faster. Sometimes in your analysis, you will find that you have too much data to fit in memory, especially when running complex transformations. In such cases, you can filter for specific rows, perform your analysis on that subset, and then append the results to your delta tables. You can repeat this process for another set of rows until you are done.</span>
+<span id="cb32-122"><a href="#cb32-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-123"><a href="#cb32-123" aria-hidden="true" tabindex="-1"></a>For instance, knowing that I have trip ID values ranging from 0 to about 48,000,000, I would:</span>
+<span id="cb32-124"><a href="#cb32-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-125"><a href="#cb32-125" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>First filter for rows between **0 and 16 million**,\</span>
+<span id="cb32-126"><a href="#cb32-126" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>Then **16 million to 32 million**,\</span>
+<span id="cb32-127"><a href="#cb32-127" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>And finally, anything **above 32 million**,\</span>
+<span id="cb32-128"><a href="#cb32-128" aria-hidden="true" tabindex="-1"></a><span class="ss">-   </span>**Appending to the same folder** each time.</span>
+<span id="cb32-129"><a href="#cb32-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-130"><a href="#cb32-130" aria-hidden="true" tabindex="-1"></a>If you have enough RAM and cores, though, feel free to run everything at once — go crazy with it!</span>
+<span id="cb32-131"><a href="#cb32-131" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-134"><a href="#cb32-134" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb32-135"><a href="#cb32-135" aria-hidden="true" tabindex="-1"></a><span class="co"># Define path to the updated locations Delta table</span></span>
+<span id="cb32-136"><a href="#cb32-136" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_one <span class="ot">&lt;-</span> <span class="fu">spark_read_delta</span>(</span>
+<span id="cb32-137"><a href="#cb32-137" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb32-138"><a href="#cb32-138" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> <span class="fu">file.path</span>(</span>
+<span id="cb32-139"><a href="#cb32-139" aria-hidden="true" tabindex="-1"></a>    <span class="fu">getwd</span>(), </span>
+<span id="cb32-140"><a href="#cb32-140" aria-hidden="true" tabindex="-1"></a>    <span class="st">"data"</span>, </span>
+<span id="cb32-141"><a href="#cb32-141" aria-hidden="true" tabindex="-1"></a>    <span class="st">"locations_sdf_updated_one"</span></span>
+<span id="cb32-142"><a href="#cb32-142" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb32-143"><a href="#cb32-143" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span> </span>
+<span id="cb32-144"><a href="#cb32-144" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(trip_id <span class="sc">&gt;=</span> <span class="dv">40000000</span> <span class="sc">&amp;</span> trip_id <span class="sc">&lt;=</span> <span class="dv">40000010</span>) <span class="sc">%&gt;%</span> <span class="co"># Filter for only ten rows</span></span>
+<span id="cb32-145"><a href="#cb32-145" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sdf_register</span>(<span class="st">"locations_sdf_updated_one_view"</span>)  <span class="co"># Register as a temporary view</span></span>
+<span id="cb32-146"><a href="#cb32-146" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb32-147"><a href="#cb32-147" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-148"><a href="#cb32-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-151"><a href="#cb32-151" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb32-152"><a href="#cb32-152" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(locations_sdf_updated_one, <span class="at">width=</span><span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span>
+<span id="cb32-153"><a href="#cb32-153" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb32-154"><a href="#cb32-154" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-155"><a href="#cb32-155" aria-hidden="true" tabindex="-1"></a><span class="fu">## Loading WorldPop Population Density dataset</span></span>
+<span id="cb32-156"><a href="#cb32-156" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-157"><a href="#cb32-157" aria-hidden="true" tabindex="-1"></a>The difference when using raster data compared to vector data with Apache Sedona is that we **do not import raster in its native format directly**. Instead, we must **first load it as a binary dataframe**, and **then convert it into its native raster format** within Sedona.</span>
+<span id="cb32-158"><a href="#cb32-158" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-159"><a href="#cb32-159" aria-hidden="true" tabindex="-1"></a>Also, bear in mind that Sedona only accepts raster files in the following formats:\</span>
+<span id="cb32-160"><a href="#cb32-160" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Arc Info ASCII Grid**,\</span>
+<span id="cb32-161"><a href="#cb32-161" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**GeoTIFF**, and\</span>
+<span id="cb32-162"><a href="#cb32-162" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**NetCDF**.</span>
+<span id="cb32-163"><a href="#cb32-163" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-164"><a href="#cb32-164" aria-hidden="true" tabindex="-1"></a>If your data is in any other raster format, you will first need to convert it to one of these supported formats.</span>
+<span id="cb32-165"><a href="#cb32-165" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-166"><a href="#cb32-166" aria-hidden="true" tabindex="-1"></a>I have found **GDAL** to be particularly useful for converting between different raster formats. For this tutorial, I used GDAL (command line) to compress the original US population density raster file, and then clip it using the NYC boundaries shapefile. I used the Deflate lossless compression algorithm. You want to work with as small a file as possible as the processing can be quite memory intensive.</span>
+<span id="cb32-167"><a href="#cb32-167" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-170"><a href="#cb32-170" aria-hidden="true" tabindex="-1"></a><span class="in">```{bash}</span></span>
+<span id="cb32-171"><a href="#cb32-171" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb32-172"><a href="#cb32-172" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-173"><a href="#cb32-173" aria-hidden="true" tabindex="-1"></a><span class="co"># Compressing the raster file</span></span>
+<span id="cb32-174"><a href="#cb32-174" aria-hidden="true" tabindex="-1"></a><span class="ex">gdal_translate</span> <span class="at">-co</span> COMPRESS=DEFLATE usa_pd_2016_1km_UNadj_clipped.tif usa_pd_2016_1km_UNadj_compressed.tif</span>
+<span id="cb32-175"><a href="#cb32-175" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-176"><a href="#cb32-176" aria-hidden="true" tabindex="-1"></a><span class="co"># Clipping the compressed raster using a shapefile boundary</span></span>
+<span id="cb32-177"><a href="#cb32-177" aria-hidden="true" tabindex="-1"></a><span class="ex">gdalwarp</span> <span class="at">-cutline</span> nynta2020.shp <span class="at">-crop_to_cutline</span> usa_pd_2016_1km_UNadj_compressed.tif nyc.tif</span>
+<span id="cb32-178"><a href="#cb32-178" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb32-179"><a href="#cb32-179" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-182"><a href="#cb32-182" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb32-183"><a href="#cb32-183" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the raster data for world population (NYC)</span></span>
+<span id="cb32-184"><a href="#cb32-184" aria-hidden="true" tabindex="-1"></a>world_pop_raster_filepath <span class="ot">&lt;-</span> <span class="fu">file.path</span>(</span>
+<span id="cb32-185"><a href="#cb32-185" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getwd</span>(),</span>
+<span id="cb32-186"><a href="#cb32-186" aria-hidden="true" tabindex="-1"></a>  <span class="st">"data"</span>,</span>
+<span id="cb32-187"><a href="#cb32-187" aria-hidden="true" tabindex="-1"></a>  <span class="st">"raster"</span>,</span>
+<span id="cb32-188"><a href="#cb32-188" aria-hidden="true" tabindex="-1"></a>  <span class="st">"worldpop"</span>,</span>
+<span id="cb32-189"><a href="#cb32-189" aria-hidden="true" tabindex="-1"></a>  <span class="st">"nyc.tif"</span></span>
+<span id="cb32-190"><a href="#cb32-190" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-191"><a href="#cb32-191" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb32-192"><a href="#cb32-192" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-195"><a href="#cb32-195" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb32-196"><a href="#cb32-196" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the raster data as a binary file</span></span>
+<span id="cb32-197"><a href="#cb32-197" aria-hidden="true" tabindex="-1"></a>world_pop_binary <span class="ot">&lt;-</span> <span class="fu">spark_read_binary</span>(</span>
+<span id="cb32-198"><a href="#cb32-198" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb32-199"><a href="#cb32-199" aria-hidden="true" tabindex="-1"></a>  <span class="at">dir =</span> world_pop_raster_filepath,</span>
+<span id="cb32-200"><a href="#cb32-200" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"worldpop"</span></span>
+<span id="cb32-201"><a href="#cb32-201" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-202"><a href="#cb32-202" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb32-203"><a href="#cb32-203" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-204"><a href="#cb32-204" aria-hidden="true" tabindex="-1"></a>We obtain raster geometry from our GeoTiff data.</span>
+<span id="cb32-205"><a href="#cb32-205" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-208"><a href="#cb32-208" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb32-209"><a href="#cb32-209" aria-hidden="true" tabindex="-1"></a><span class="co"># Register the world population raster as a temporary view</span></span>
+<span id="cb32-210"><a href="#cb32-210" aria-hidden="true" tabindex="-1"></a>world_pop_binary <span class="sc">|&gt;</span> <span class="fu">sdf_register</span>(<span class="st">"worldpop_view"</span>)</span>
+<span id="cb32-211"><a href="#cb32-211" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-212"><a href="#cb32-212" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract raster data from the GeoTiff file using Sedona</span></span>
+<span id="cb32-213"><a href="#cb32-213" aria-hidden="true" tabindex="-1"></a>worldpop_sdf <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
+<span id="cb32-214"><a href="#cb32-214" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb32-215"><a href="#cb32-215" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
+<span id="cb32-216"><a href="#cb32-216" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT RS_FromGeoTiff(content) AS raster FROM worldpop_view</span></span>
+<span id="cb32-217"><a href="#cb32-217" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
+<span id="cb32-218"><a href="#cb32-218" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-219"><a href="#cb32-219" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-220"><a href="#cb32-220" aria-hidden="true" tabindex="-1"></a><span class="co"># Register the raster data as a temporary view</span></span>
+<span id="cb32-221"><a href="#cb32-221" aria-hidden="true" tabindex="-1"></a>worldpop_sdf <span class="sc">|&gt;</span> <span class="fu">sdf_register</span>(<span class="st">"worldpop_view"</span>) <span class="sc">|&gt;</span> <span class="fu">compute</span>()</span>
+<span id="cb32-222"><a href="#cb32-222" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-223"><a href="#cb32-223" aria-hidden="true" tabindex="-1"></a>worldpop_sdf <span class="sc">%&gt;%</span> <span class="fu">glimpse</span>()</span>
+<span id="cb32-224"><a href="#cb32-224" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb32-225"><a href="#cb32-225" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-226"><a href="#cb32-226" aria-hidden="true" tabindex="-1"></a>We can retrieve metadata from our raster file, including:\</span>
+<span id="cb32-227"><a href="#cb32-227" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The **upper left coordinates** of the raster (in the raster’s coordinate system units),\</span>
+<span id="cb32-228"><a href="#cb32-228" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The **width and height** of the raster (in number of pixels),\</span>
+<span id="cb32-229"><a href="#cb32-229" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The **spatial resolution** of each pixel (in units of the raster’s CRS),\</span>
+<span id="cb32-230"><a href="#cb32-230" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Any **skew or rotation** of the raster (if present),\</span>
+<span id="cb32-231"><a href="#cb32-231" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The **SRID** (spatial reference system identifier) of the raster’s coordinate system,\</span>
+<span id="cb32-232"><a href="#cb32-232" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The **number of bands**, and\</span>
+<span id="cb32-233"><a href="#cb32-233" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Tile width and height**.</span>
+<span id="cb32-234"><a href="#cb32-234" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-235"><a href="#cb32-235" aria-hidden="true" tabindex="-1"></a>In our case:\</span>
+<span id="cb32-236"><a href="#cb32-236" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Upper left X coordinate**: <span class="in">`-74.25125`</span>\</span>
+<span id="cb32-237"><a href="#cb32-237" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Upper left Y coordinate**: <span class="in">`40.90792`</span> (both in degrees as the CRS is WGS84)\</span>
+<span id="cb32-238"><a href="#cb32-238" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Raster size**: <span class="in">`66 x 49`</span> pixels (quite small)\</span>
+<span id="cb32-239"><a href="#cb32-239" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Pixel resolution**: <span class="in">`0.00833 x -0.00833`</span> degrees\</span>
+<span id="cb32-240"><a href="#cb32-240" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Skew**: <span class="in">`0`</span> in both x and y directions (i.e., no skew)\</span>
+<span id="cb32-241"><a href="#cb32-241" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**SRID**: <span class="in">`4326`</span> (WGS 84)\</span>
+<span id="cb32-242"><a href="#cb32-242" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Number of bands**: <span class="in">`2`</span>\</span>
+<span id="cb32-243"><a href="#cb32-243" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Tile width**: `66`, **Tile height**: <span class="in">`15`</span></span>
+<span id="cb32-244"><a href="#cb32-244" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-245"><a href="#cb32-245" aria-hidden="true" tabindex="-1"></a>All this information is important when interpreting and working with raster data, especially when performing coordinate-based queries.</span>
+<span id="cb32-246"><a href="#cb32-246" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-249"><a href="#cb32-249" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb32-250"><a href="#cb32-250" aria-hidden="true" tabindex="-1"></a><span class="co"># Retrieve and view metadata for the world population raster</span></span>
+<span id="cb32-251"><a href="#cb32-251" aria-hidden="true" tabindex="-1"></a>worldpop_sdf_metadata <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
+<span id="cb32-252"><a href="#cb32-252" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb32-253"><a href="#cb32-253" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
+<span id="cb32-254"><a href="#cb32-254" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT RS_MetaData(raster) FROM worldpop_view</span></span>
+<span id="cb32-255"><a href="#cb32-255" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
+<span id="cb32-256"><a href="#cb32-256" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span> <span class="fu">collect</span>()</span>
+<span id="cb32-257"><a href="#cb32-257" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb32-258"><a href="#cb32-258" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-261"><a href="#cb32-261" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb32-262"><a href="#cb32-262" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">width =</span> <span class="dv">100</span>)</span>
+<span id="cb32-263"><a href="#cb32-263" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-264"><a href="#cb32-264" aria-hidden="true" tabindex="-1"></a><span class="co"># Glimpse at the metadata information</span></span>
+<span id="cb32-265"><a href="#cb32-265" aria-hidden="true" tabindex="-1"></a>worldpop_sdf_metadata <span class="sc">|&gt;</span> <span class="fu">glimpse</span>()</span>
+<span id="cb32-266"><a href="#cb32-266" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb32-267"><a href="#cb32-267" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-268"><a href="#cb32-268" aria-hidden="true" tabindex="-1"></a><span class="fu">## Joining point data with raster data</span></span>
+<span id="cb32-269"><a href="#cb32-269" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-270"><a href="#cb32-270" aria-hidden="true" tabindex="-1"></a>We now conduct the join using Spatial SQL, as it is much easier and more intuitive than using Apache Sedona's R functions for raster operations in my opinion.</span>
+<span id="cb32-271"><a href="#cb32-271" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-272"><a href="#cb32-272" aria-hidden="true" tabindex="-1"></a>By leveraging Spatial SQL, we can directly query raster values at specific pickup and dropoff coordinates, simplifying what would otherwise be a more complex process if done via function-based syntax.</span>
+<span id="cb32-273"><a href="#cb32-273" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-276"><a href="#cb32-276" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb32-277"><a href="#cb32-277" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform a spatial join between the locations and the world population data to calculate population density</span></span>
+<span id="cb32-278"><a href="#cb32-278" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_two <span class="ot">&lt;-</span> <span class="fu">sdf_sql</span>(</span>
+<span id="cb32-279"><a href="#cb32-279" aria-hidden="true" tabindex="-1"></a>  sc,</span>
+<span id="cb32-280"><a href="#cb32-280" aria-hidden="true" tabindex="-1"></a>  <span class="st">"</span></span>
+<span id="cb32-281"><a href="#cb32-281" aria-hidden="true" tabindex="-1"></a><span class="st">  SELECT </span></span>
+<span id="cb32-282"><a href="#cb32-282" aria-hidden="true" tabindex="-1"></a><span class="st">    /*+ BROADCAST(w) */ l.*, RS_Value(w.raster, ST_Point(l.longitude, l.latitude)) AS pop_density</span></span>
+<span id="cb32-283"><a href="#cb32-283" aria-hidden="true" tabindex="-1"></a><span class="st">  FROM</span></span>
+<span id="cb32-284"><a href="#cb32-284" aria-hidden="true" tabindex="-1"></a><span class="st">    locations_sdf_updated_one_view l</span></span>
+<span id="cb32-285"><a href="#cb32-285" aria-hidden="true" tabindex="-1"></a><span class="st">  LEFT JOIN worldpop_view w</span></span>
+<span id="cb32-286"><a href="#cb32-286" aria-hidden="true" tabindex="-1"></a><span class="st">    ON RS_Intersects(w.raster, ST_POINT(l.longitude, l.latitude))</span></span>
+<span id="cb32-287"><a href="#cb32-287" aria-hidden="true" tabindex="-1"></a><span class="st">  "</span></span>
+<span id="cb32-288"><a href="#cb32-288" aria-hidden="true" tabindex="-1"></a>) </span>
+<span id="cb32-289"><a href="#cb32-289" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb32-290"><a href="#cb32-290" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-291"><a href="#cb32-291" aria-hidden="true" tabindex="-1"></a>We can now take a look at the result of our join below.</span>
+<span id="cb32-292"><a href="#cb32-292" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-295"><a href="#cb32-295" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb32-296"><a href="#cb32-296" aria-hidden="true" tabindex="-1"></a><span class="co"># Glimpse at the updated data with population density</span></span>
+<span id="cb32-297"><a href="#cb32-297" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_two <span class="sc">%&gt;%</span> <span class="fu">glimpse</span>()</span>
+<span id="cb32-298"><a href="#cb32-298" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-299"><a href="#cb32-299" aria-hidden="true" tabindex="-1"></a><span class="co"># Print a preview of the resulting dataframe with specific formatting options</span></span>
+<span id="cb32-300"><a href="#cb32-300" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(locations_sdf_updated_two, <span class="at">n=</span><span class="dv">10</span>, <span class="at">width=</span><span class="cn">Inf</span>)</span>
+<span id="cb32-301"><a href="#cb32-301" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb32-302"><a href="#cb32-302" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-303"><a href="#cb32-303" aria-hidden="true" tabindex="-1"></a>Perfect! We have successfully obtained approximate population density values for each pickup and dropoff location.</span>
+<span id="cb32-304"><a href="#cb32-304" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-305"><a href="#cb32-305" aria-hidden="true" tabindex="-1"></a><span class="fu">## Saving the data</span></span>
+<span id="cb32-306"><a href="#cb32-306" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-307"><a href="#cb32-307" aria-hidden="true" tabindex="-1"></a>Writing the updated data to file for further processing.</span>
+<span id="cb32-308"><a href="#cb32-308" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-311"><a href="#cb32-311" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb32-312"><a href="#cb32-312" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb32-313"><a href="#cb32-313" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-314"><a href="#cb32-314" aria-hidden="true" tabindex="-1"></a><span class="co"># Define file path for saving the updated dataframe</span></span>
+<span id="cb32-315"><a href="#cb32-315" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_two_file_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(</span>
+<span id="cb32-316"><a href="#cb32-316" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getwd</span>(), </span>
+<span id="cb32-317"><a href="#cb32-317" aria-hidden="true" tabindex="-1"></a>  <span class="st">"data"</span>, </span>
+<span id="cb32-318"><a href="#cb32-318" aria-hidden="true" tabindex="-1"></a>  <span class="st">"locations_sdf_updated_two"</span></span>
+<span id="cb32-319"><a href="#cb32-319" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-320"><a href="#cb32-320" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-321"><a href="#cb32-321" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the final dataframe as a Delta table</span></span>
+<span id="cb32-322"><a href="#cb32-322" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
+<span id="cb32-323"><a href="#cb32-323" aria-hidden="true" tabindex="-1"></a>  locations_sdf_updated_two,</span>
+<span id="cb32-324"><a href="#cb32-324" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> locations_sdf_updated_two_file_path,</span>
+<span id="cb32-325"><a href="#cb32-325" aria-hidden="true" tabindex="-1"></a>  <span class="at">mode =</span> <span class="st">"append"</span>  <span class="co"># Overwrite any existing data at the location</span></span>
+<span id="cb32-326"><a href="#cb32-326" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-327"><a href="#cb32-327" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb32-328"><a href="#cb32-328" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-331"><a href="#cb32-331" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb32-332"><a href="#cb32-332" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from the Spark session</span></span>
+<span id="cb32-333"><a href="#cb32-333" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span>
+<span id="cb32-334"><a href="#cb32-334" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb32-335"><a href="#cb32-335" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-336"><a href="#cb32-336" aria-hidden="true" tabindex="-1"></a><span class="fu">## References</span></span>
+<span id="cb32-337"><a href="#cb32-337" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>WorldPop (www.worldpop.org - School of Geography and Environmental Science, University of Southampton; Department of Geography and Geosciences, University of Louisville; Departement de Geographie, Universite de Namur) and Center for International Earth Science Information Network (CIESIN), Columbia University (2018). Global High Resolution Population Denominators Project - Funded by The Bill and Melinda Gates Foundation (OPP1134076). https://dx.doi.org/10.5258/SOTON/WP00675</span>
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

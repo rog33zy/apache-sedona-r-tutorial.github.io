@@ -237,7 +237,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>In this chapter, we shall demonstrate how to perform basic data cleaning and feature engineering using Sparklyr, and how to save the data in the Delta Lake format.</p>
 <p>The primary dataset was downloaded from Kaggle <a href="https://www.kaggle.com/datasets/elemento/nyc-yellow-taxi-trip-data?resource=download">here</a>. It provides information about taxi trips, including the pickup and dropoff times and locations. Our goal is to enrich it using additional data obtained from geospatial sources, and leave the rest to you to visualise it and perform analysis that predicts taxi trip durations.</p>
 <p>The overarching goal is to show you how to go about using <strong>Delta Lake</strong>, <strong>Sparklyr</strong>, <strong>Apache Sedona</strong>, and <strong>R</strong> for big data geospatial analysis when you only have an ordinary computer at your disposal.</p>
-<p>For my actual analysis, I used the entire 7.4 GB dataset provided, containing about <strong>48 million rows</strong>. However, for this published tutorial, I use less data so as to timely publish and update this website. For reference, I am using an <strong>M1 MacBook</strong> with <strong>16 GB of RAM</strong> and <strong>500 GB of disk space</strong>.</p>
+<p>For my actual analysis, I used the entire 7.4 GB dataset provided, containing about <strong>48 million rows</strong>. However, for this published tutorial, I sometimes use less data so as to timely publish and update this website. For reference, I am using an <strong>M1 MacBook</strong> with <strong>16 GB of RAM</strong> and <strong>500 GB of disk space</strong>.</p>
 <p>If you have 8 GB of RAM, I would suggest that you use one of the four datasets available, as they are also relatively massive with about 12 million rows each!</p>
 <p>Anyhow, enough talking — let us get to work.</p>
 </section>
@@ -343,14 +343,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Open Spark web UI for monitoring the connection</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_web</span>(sc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>After successfully setting up a Spark context, we now turn to loading our data. We start by specifying the path where the files are located. Note that we are instructing Spark to read all CSV files within the <code>yellow_tripdata2</code> subfolder.</p>
+<p>After successfully setting up a Spark context, we now turn to loading our data. We start by specifying the path where the files are located. Note that we are instructing Spark to read all CSV files within the <code>yellow_tripdata</code> subfolder.</p>
 <p>Additionally, we organise our data into <strong>24 partitions</strong>. We chose 24 because it is <strong>three times the number of our total cores (8)</strong>. This approach helps ensure parallelism during processing and prevents <a href="https://aws.amazon.com/blogs/big-data/detect-and-handle-data-skew-on-aws-glue/">data skew</a>, which could otherwise slow down our computations.</p>
 </section>
 <section id="loading-the-data" class="level2" data-number="2.5">
 <h2 data-number="2.5" class="anchored" data-anchor-id="loading-the-data"><span class="header-section-number">2.5</span> Loading the data</h2>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the path for the yellow cab data</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>yellow_cab_parent_folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"yellow_tripdata2"</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>yellow_cab_parent_folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"yellow_tripdata"</span>)</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>yellow_cab_filepattern <span class="ot">&lt;-</span> <span class="fu">file.path</span>(yellow_cab_parent_folder, <span class="st">"*csv"</span>)</span>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the yellow cab data from CSV files into a Spark DataFrame</span></span>
@@ -368,56 +368,68 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 range</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   table&lt;`sparklyr_tmp_cdeeca9d_12da_4fee_ac96_b924b0984712`&gt; [?? x 19]
+<pre><code># Source:   table&lt;`sparklyr_tmp_33d280d0_2434_4c0f_b222_7dce9f25ef6b`&gt; [?? x 19]
 # Database: spark_connection
    VendorID tpep_pickup_datetime tpep_dropoff_datetime passenger_count
-      &lt;int&gt; &lt;dttm&gt;               &lt;dttm&gt;                          &lt;int&gt;
- 1        2 2015-01-18 17:45:00  2015-01-18 17:57:45                 4
- 2        1 2015-01-31 14:03:11  2015-01-31 14:17:05                 2
- 3        1 2015-01-28 19:32:25  2015-01-28 19:46:27                 1
- 4        1 2015-01-05 22:56:32  2015-01-05 23:20:10                 2
- 5        1 2015-01-13 09:37:19  2015-01-13 09:41:48                 1
- 6        1 2015-01-16 12:25:43  2015-01-16 12:34:48                 2
- 7        2 2015-01-09 08:29:19  2015-01-09 08:43:06                 5
- 8        1 2015-01-16 11:12:02  2015-01-16 11:18:16                 1
- 9        1 2015-01-05 23:22:23  2015-01-05 23:38:34                 1
-10        2 2015-01-09 19:08:57  2015-01-09 19:34:14                 6
-   trip_distance pickup_longitude pickup_latitude RateCodeID store_and_fwd_flag
-           &lt;dbl&gt;            &lt;dbl&gt;           &lt;dbl&gt;      &lt;int&gt; &lt;chr&gt;             
- 1          2.31            -74.0            40.8          1 N                 
- 2          2.3             -74.0            40.8          1 N                 
- 3          1.5             -74.0            40.7          1 N                 
- 4         16.3             -73.8            40.6          1 N                 
- 5          1               -74.0            40.8          1 N                 
- 6          1.5             -74.0            40.8          1 N                 
- 7          1.29            -74.0            40.8          1 N                 
- 8          1.1             -74.0            40.8          1 N                 
- 9          5               -74.0            40.8          1 N                 
-10          6.31            -74.0            40.7          1 N                 
-   dropoff_longitude dropoff_latitude payment_type fare_amount extra mta_tax
-               &lt;dbl&gt;            &lt;dbl&gt;        &lt;int&gt;       &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;
- 1             -74.0             40.7            1        10.5   0       0.5
- 2             -74.0             40.8            1        11     0       0.5
- 3             -74.0             40.8            1        10     1       0.5
- 4             -73.9             40.6            2        44     0.5     0.5
- 5             -74.0             40.8            2         5.5   0       0.5
- 6             -74.0             40.8            2         8     0       0.5
- 7             -74.0             40.8            2         9.5   0       0.5
- 8             -74.0             40.8            2         6     0       0.5
- 9             -73.9             40.8            2        17     0.5     0.5
-10             -74.0             40.8            1        23     1       0.5
-   tip_amount tolls_amount improvement_surcharge total_amount
-        &lt;dbl&gt;        &lt;dbl&gt;                 &lt;dbl&gt;        &lt;dbl&gt;
- 1       1.5             0                   0.3         12.8
- 2       3               0                   0.3         14.8
- 3       2.35            0                   0.3         14.2
- 4       0               2                   0.3         47.3
- 5       0               0                   0.3          6.3
- 6       0               0                   0.3          8.8
- 7       0               0                   0.3         10.3
- 8       0               0                   0.3          6.8
- 9       0               0                   0.3         18.3
-10       7.2             0                   0.3         32  
+   &lt;chr&gt;    &lt;chr&gt;                &lt;chr&gt;                 &lt;chr&gt;          
+ 1 1        2015-01-26 12:25:20  2015-01-26 12:39:02   1              
+ 2 2        2015-01-15 22:08:32  2015-01-15 22:23:12   1              
+ 3 1        2015-01-27 11:30:29  2015-01-27 11:34:35   1              
+ 4 1        2015-01-06 22:48:59  2015-01-06 22:59:12   1              
+ 5 1        2015-01-16 21:28:01  2015-01-16 21:58:08   2              
+ 6 2        2015-01-09 10:10:06  2015-01-09 10:17:24   2              
+ 7 2        2015-01-24 00:43:49  2015-01-24 00:45:52   1              
+ 8 1        2015-01-18 16:27:09  2015-01-18 16:35:31   2              
+ 9 1        2015-01-14 22:57:21  2015-01-14 23:10:52   1              
+10 2        2015-01-02 02:09:53  2015-01-02 02:13:07   1              
+   trip_distance pickup_longitude    pickup_latitude    RateCodeID
+   &lt;chr&gt;         &lt;chr&gt;               &lt;chr&gt;              &lt;chr&gt;     
+ 1 1.60          -73.988983154296875 40.748603820800781 1         
+ 2 1.51          -73.994148254394531 40.751190185546875 1         
+ 3 .60           -73.902961730957031 40.770702362060547 1         
+ 4 1.80          -73.9700927734375   40.757877349853516 1         
+ 5 7.40          -73.99237060546875  40.742774963378906 1         
+ 6 1.15          -73.978851318359375 40.766895294189453 1         
+ 7 .60           -73.987869262695312 40.749561309814453 1         
+ 8 1.00          -73.991905212402344 40.755977630615234 1         
+ 9 1.50          -73.9891357421875   40.758594512939453 1         
+10 .72           -73.978500366210938 40.783191680908203 1         
+   store_and_fwd_flag dropoff_longitude   dropoff_latitude   payment_type
+   &lt;chr&gt;              &lt;chr&gt;               &lt;chr&gt;              &lt;chr&gt;       
+ 1 N                  -73.98883056640625  40.740432739257813 1           
+ 2 N                  -73.972984313964844 40.750438690185547 2           
+ 3 N                  -73.911933898925781 40.775138854980469 1           
+ 4 N                  -73.994132995605469 40.751636505126953 1           
+ 5 N                  -73.908111572265625 40.708057403564453 1           
+ 6 N                  -73.979690551757812 40.781406402587891 1           
+ 7 N                  -73.985969543457031 40.756549835205078 2           
+ 8 N                  -73.98345947265625  40.757297515869141 2           
+ 9 N                  -73.973533630371094 40.747013092041016 1           
+10 N                  -73.971961975097656 40.783878326416016 2           
+   fare_amount extra mta_tax tip_amount tolls_amount improvement_surcharge
+   &lt;chr&gt;       &lt;chr&gt; &lt;chr&gt;   &lt;chr&gt;      &lt;chr&gt;        &lt;chr&gt;                
+ 1 9.5         0     0.5     2.05       0            0.3                  
+ 2 11          0.5   0.5     0          0            0.3                  
+ 3 4.5         0     0.5     1.55       0            0.3                  
+ 4 8.5         0.5   0.5     1.95       0            0.3                  
+ 5 26.5        0.5   0.5     5.55       0            0.3                  
+ 6 7           0     0.5     1.4        0            0.3                  
+ 7 4           0.5   0.5     0          0            0.3                  
+ 8 7           0     0.5     0          0            0.3                  
+ 9 10          0.5   0.5     1          0            0.3                  
+10 4.5         0.5   0.5     0          0            0.3                  
+   total_amount
+   &lt;chr&gt;       
+ 1 12.35       
+ 2 12.3        
+ 3 6.85        
+ 4 11.75       
+ 5 33.35       
+ 6 9.2         
+ 7 5.3         
+ 8 7.8         
+ 9 12.3        
+10 5.8         
 # ℹ more rows</code></pre>
 </div>
 </div>
@@ -428,30 +440,30 @@ range</code></pre>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sdf_partition_sizes</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   partition_index partition_size
-1                0         531207
-2                1         531207
-3                2         531208
-4                3         531209
-5                4         531208
-6                5         531209
-7                6         531209
-8                7         531209
-9                8         531209
-10               9         531209
-11              10         531209
-12              11         531208
-13              12         531207
-14              13         531207
-15              14         531208
-16              15         531206
-17              16         531206
-18              17         531207
-19              18         531207
-20              19         531207
-21              20         531207
-22              21         531208
-23              22         531208
-24              23         531207</code></pre>
+1                0        1968700
+2                1        1968700
+3                2        1968701
+4                3        1968700
+5                4        1968701
+6                5        1968703
+7                6        1968702
+8                7        1968702
+9                8        1968701
+10               9        1968703
+11              10        1968706
+12              11        1968704
+13              12        1968703
+14              13        1968703
+15              14        1968701
+16              15        1968700
+17              16        1968701
+18              17        1968702
+19              18        1968701
+20              19        1968701
+21              20        1968700
+22              21        1968703
+23              22        1968705
+24              23        1968702</code></pre>
 </div>
 </div>
 <p>Below we can see how many columns and rows our data has.</p>
@@ -463,7 +475,7 @@ range</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sdf_nrow</span>(yellow_cab_sdf)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 12748986</code></pre>
+<pre><code>[1] 47248845</code></pre>
 </div>
 </div>
 </section>
@@ -596,18 +608,18 @@ This warning is displayed once every 8 hours.</code></pre>
 <span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(summary_stats, <span class="at">width=</span><span class="cn">Inf</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 5
-  summary passenger_count    trip_distance      fare_amount       
-  &lt;chr&gt;   &lt;chr&gt;              &lt;chr&gt;              &lt;chr&gt;             
-1 count   12744540           12744540           12744540          
-2 mean    1.6814257713499272 13.463742718057857 11.909546539144802
-3 stddev  1.337878603394413  9845.811147870672  10.2934513049107  
-4 min     0                  0.0                -450.0            
-5 max     9                  1.54200045E7       4008.0            
+  summary passenger_count    trip_distance     fare_amount       
+  &lt;chr&gt;   &lt;chr&gt;              &lt;chr&gt;             &lt;chr&gt;             
+1 count   47231381           47231381          47231381          
+2 mean    1.6669565304474159 7.511100940283872 12.396603992375454
+3 stddev  1.3220203537930795 6488.8576466189   78.63046129746266 
+4 min     0                  -3390583.8        -450.0            
+5 max     9                  1.90726288E7      429496.72         
   total_amount      
   &lt;chr&gt;             
-1 12744540          
-2 15.113263990870497
-3 1106.6961150825007
+1 47231381          
+2 15.598314385358897
+3 580.2462379599986 
 4 -450.3            
 5 3950611.6         </code></pre>
 </div>
@@ -704,18 +716,18 @@ range</code></pre>
 5            1            0 Thu                          1             1
   is_weekend_pickup is_weekend_dropoff is_rush_hour_pickup trip_distance_scaled
               &lt;dbl&gt;              &lt;dbl&gt;               &lt;dbl&gt;                &lt;dbl&gt;
-1                 0                  0                   0               -0.331
-2                 0                  0                   0               -0.650
-3                 0                  0                   0                1.48 
+1                 0                  0                   0               -0.342
+2                 0                  0                   0               -0.648
+3                 0                  0                   0                1.39 
 4                 0                  0                   0               -0.620
-5                 0                  0                   0               -0.739
+5                 0                  0                   0               -0.733
   fare_amount_scaled
                &lt;dbl&gt;
-1             -0.192
-2             -0.807
-3             -0.961
-4             -0.653
-5             -0.807
+1             -0.227
+2             -0.811
+3             -0.957
+4             -0.665
+5             -0.811
 # ℹ more rows</code></pre>
 </div>
 </div>
@@ -760,7 +772,7 @@ range</code></pre>
 range</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   table&lt;`sparklyr_tmp__0ce28e80_7a5a_4ee1_a1f1_047dd5682f55`&gt; [?? x 4]
+<pre><code># Source:   table&lt;`sparklyr_tmp__8390928b_cdb8_4fac_b1ed_c4006a9db6c2`&gt; [?? x 4]
 # Database: spark_connection
    trip_id latitude longitude is_pickup
      &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
@@ -834,20 +846,20 @@ range</code></pre>
 6            1            0 Thu                          1             1
   is_weekend_pickup is_weekend_dropoff is_rush_hour_pickup trip_distance_scaled
               &lt;dbl&gt;              &lt;dbl&gt;               &lt;dbl&gt;                &lt;dbl&gt;
-1                 0                  0                   0               -0.290
-2                 0                  0                   0               -0.236
-3                 0                  0                   0                0.561
-4                 0                  0                   0               -0.396
-5                 0                  0                   0               -0.236
-6                 0                  0                   0               -0.101
+1                 0                  0                   0               -0.302
+2                 0                  0                   0               -0.251
+3                 0                  0                   0                0.514
+4                 0                  0                   0               -0.404
+5                 0                  0                   0               -0.251
+6                 0                  0                   0               -0.121
   fare_amount_scaled trip_id
                &lt;dbl&gt;   &lt;dbl&gt;
-1            -0.397      400
-2            -0.243      401
-3             0.290      402
-4            -0.243      403
-5            -0.0378     404
-6             0.0135     405</code></pre>
+1            -0.421      400
+2            -0.275      401
+3             0.231      402
+4            -0.275      403
+5            -0.0806     404
+6            -0.0320     405</code></pre>
 </div>
 </div>
 </section>
@@ -1351,7 +1363,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>The overarching goal is to show you how to go about using **Delta Lake**, **Sparklyr**, **Apache Sedona**, and **R** for big data geospatial analysis when you only have an ordinary computer at your disposal.</span>
 <span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a>For my actual analysis, I used the entire 7.4 GB dataset provided, containing about **48 million rows**. However, for this published tutorial, I use less data so as to timely publish and update this website. For reference, I am using an **M1 MacBook** with **16 GB of RAM** and **500 GB of disk space**. </span>
+<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a>For my actual analysis, I used the entire 7.4 GB dataset provided, containing about **48 million rows**. However, for this published tutorial, I sometimes use less data so as to timely publish and update this website. For reference, I am using an **M1 MacBook** with **16 GB of RAM** and **500 GB of disk space**. </span>
 <span id="cb45-17"><a href="#cb45-17" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb45-18"><a href="#cb45-18" aria-hidden="true" tabindex="-1"></a>If you have 8 GB of RAM, I would suggest that you use one of the four datasets available, as they are also relatively massive with about 12 million rows each!</span>
 <span id="cb45-19"><a href="#cb45-19" aria-hidden="true" tabindex="-1"></a></span>
@@ -1493,7 +1505,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb45-171"><a href="#cb45-171" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_web</span>(sc)</span>
 <span id="cb45-172"><a href="#cb45-172" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb45-173"><a href="#cb45-173" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-174"><a href="#cb45-174" aria-hidden="true" tabindex="-1"></a>After successfully setting up a Spark context, we now turn to loading our data. We start by specifying the path where the files are located. Note that we are instructing Spark to read all CSV files within the <span class="in">`yellow_tripdata2`</span> subfolder.</span>
+<span id="cb45-174"><a href="#cb45-174" aria-hidden="true" tabindex="-1"></a>After successfully setting up a Spark context, we now turn to loading our data. We start by specifying the path where the files are located. Note that we are instructing Spark to read all CSV files within the <span class="in">`yellow_tripdata`</span> subfolder.</span>
 <span id="cb45-175"><a href="#cb45-175" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb45-176"><a href="#cb45-176" aria-hidden="true" tabindex="-1"></a>Additionally, we organise our data into **24 partitions**. We chose 24 because it is **three times the number of our total cores (8)**. This approach helps ensure parallelism during processing and prevents <span class="co">[</span><span class="ot">data skew</span><span class="co">](https://aws.amazon.com/blogs/big-data/detect-and-handle-data-skew-on-aws-glue/)</span>, which could otherwise slow down our computations.</span>
 <span id="cb45-177"><a href="#cb45-177" aria-hidden="true" tabindex="-1"></a></span>
@@ -1501,7 +1513,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb45-179"><a href="#cb45-179" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb45-182"><a href="#cb45-182" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
 <span id="cb45-183"><a href="#cb45-183" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the path for the yellow cab data</span></span>
-<span id="cb45-184"><a href="#cb45-184" aria-hidden="true" tabindex="-1"></a>yellow_cab_parent_folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"yellow_tripdata2"</span>)</span>
+<span id="cb45-184"><a href="#cb45-184" aria-hidden="true" tabindex="-1"></a>yellow_cab_parent_folder <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">getwd</span>(), <span class="st">"data"</span>, <span class="st">"yellow_tripdata"</span>)</span>
 <span id="cb45-185"><a href="#cb45-185" aria-hidden="true" tabindex="-1"></a>yellow_cab_filepattern <span class="ot">&lt;-</span> <span class="fu">file.path</span>(yellow_cab_parent_folder, <span class="st">"*csv"</span>)</span>
 <span id="cb45-186"><a href="#cb45-186" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb45-187"><a href="#cb45-187" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the yellow cab data from CSV files into a Spark DataFrame</span></span>

@@ -1,6 +1,6 @@
 ---
 title: "Part One - Processing Raster Data with Apache Sedona and Sparklyr in R"
-subtitle: "Using Raster Data to Determine Population Density Around Pickup and Dropoff Points"
+subtitle: "Using WorldPop Data to Determine Population Density Around Pickup and Dropoff Points"
 execute: 
   eval: true
   output: true
@@ -8,13 +8,13 @@ execute:
 
 ## Introduction
 
-We are going to demonstrate how to obtain information from **raster files** based on coordinates in this chapter. Let us assume that there is a relationship between the **duration of a taxi ride** and the **population density** of an area. We will, therefore, need to extract population density values at each **pickup and dropoff location**. Such granular data is typically available in **raster format**, which is why we use **WorldPop population density data** with a resolution of **1 km by 1 km** for this purpose. You can download the data [here](https://www.worldpop.org) to follow along.
+In this chapter, we are going to demonstrate how to obtain information from raster files based on geographic coordinates. Let us assume that there is a relationship between the duration of a taxi (dependent variable) ride and the population density of an area. We will, therefore, need to extract population density values at each pickup and dropoff location. Such granular data is typically available in **raster format**, which is why we use **WorldPop population density data** with a resolution of **1 km by 1 km** for this purpose. You can download the data [here](https://data.worldpop.org/GIS/Population_Density/Global_2000_2020_1km_UNadj/2016/USA/usa_pd_2016_1km_UNadj.tif) to follow along.
 
-The **Spark configuration** used for this chapter — and the next one — is **identical** to that used in **Chapter 2**, so it has **not been included below for brevity's sake**.
+The Spark configuration used in this chapter — and the next one — is identical to the one used in Chapter 3, so it is not shown below for brevity's sake.
 
-Furthermore, because I need to **re-run this code multiple times** to render this website, I shall **filter only a few rows** from the **94 million** we previously worked with, as I will be constantly updating this site. **In the actual analysis I conducted, however, I used the full dataset.**
+Furthermore, because I need to re-run this code multiple times to render this website, I shall filter only a few rows from the 94 million we previously worked with, as I will be constantly updating this site. In the actual analysis I conducted, however, I used the full dataset.
 
-You can find out more about using **Apache Sedona for raster manipulation** [here](https://sedona.apache.org).
+You can find out more about using Apache Sedona for raster manipulation [here](https://sedona.apache.org/1.4.1/api/rdocs/articles/raster.html).
 
 ```{r}
 #| echo: false
@@ -114,20 +114,18 @@ invoke_static(
 
 ## Loading updated locations data
 
-We start by **loading our updated locations data**, which now contains **household median income by neighbourhood** information.
+We start by loading our updated locations data, which now contains household median income by neighbourhood information.
 
-To reiterate, I will **filter for about 14 million rows** here so that I can **render this webpage faster**. However, sometimes in your analysis, you will find that you have **too much data and limited memory**, especially when running **complex transformations**.
+To reiterate, I will filter for a few rows here so that I can render this webpage faster. Sometimes in your analysis, you will find that you have too much data to fit in memory, especially when running complex transformations. In such cases, you can filter for specific rows, perform your analysis on that subset, and then append the results to your delta tables. You can repeat this process for another set of rows until you are done.
 
-In such cases, you can **filter for specific rows**, perform your analysis on that subset, and then **append the results to your delta tables**. You can repeat this process for another set of rows until you are done.
-
-For instance, knowing that I have **trip ID values ranging from 0 to about 48,000,000**, I would:
+For instance, knowing that I have trip ID values ranging from 0 to about 48,000,000, I would:
 
 -   First filter for rows between **0 and 16 million**,\
 -   Then **16 million to 32 million**,\
 -   And finally, anything **above 32 million**,\
 -   **Appending to the same folder** each time.
 
-If you have **enough RAM and cores**, though, **feel free to run everything at once** — go crazy with it!
+If you have enough RAM and cores, though, feel free to run everything at once — go crazy with it!
 
 ```{r}
 # Define path to the updated locations Delta table
@@ -150,16 +148,26 @@ print(locations_sdf_updated_one, width=Inf, n=10)
 
 ## Loading WorldPop Population Density dataset
 
-The difference when using **raster data** compared to vector data with **Apache Sedona** is that we **do not import raster in its native format directly**. Instead, we must **first load it as a binary dataframe**, and **then convert it into its native raster format** within Sedona.
+The difference when using raster data compared to vector data with Apache Sedona is that we **do not import raster in its native format directly**. Instead, we must **first load it as a binary dataframe**, and **then convert it into its native raster format** within Sedona.
 
-Also, **bear in mind** that **Sedona only accepts raster files** in the following formats:\
+Also, bear in mind that Sedona only accepts raster files in the following formats:\
 - **Arc Info ASCII Grid**,\
 - **GeoTIFF**, and\
 - **NetCDF**.
 
-If your data is in **any other raster format**, you will first need to **convert it to one of these supported formats**.
+If your data is in any other raster format, you will first need to convert it to one of these supported formats.
 
-I have found **GDAL** to be **particularly useful for converting between different raster formats** — definitely a tool to keep in your geospatial toolbox!
+I have found **GDAL** to be particularly useful for converting between different raster formats. For this tutorial, I used GDAL (command line) to compress the original US population density raster file, and then clip it using the NYC boundaries shapefile. I used the Deflate lossless compression algorithm. You want to work with as small a file as possible as the processing can be quite memory intensive.
+
+```{bash}
+#| eval: false
+
+# Compressing the raster file
+gdal_translate -co COMPRESS=DEFLATE usa_pd_2016_1km_UNadj_clipped.tif usa_pd_2016_1km_UNadj_compressed.tif
+
+# Clipping the compressed raster using a shapefile boundary
+gdalwarp -cutline nynta2020.shp -crop_to_cutline usa_pd_2016_1km_UNadj_compressed.tif nyc.tif
+```
 
 ```{r}
 # Load the raster data for world population (NYC)
@@ -201,7 +209,7 @@ worldpop_sdf |> sdf_register("worldpop_view") |> compute()
 worldpop_sdf %>% glimpse()
 ```
 
-We can **retrieve metadata** from our raster file, including:\
+We can retrieve metadata from our raster file, including:\
 - The **upper left coordinates** of the raster (in the raster’s coordinate system units),\
 - The **width and height** of the raster (in number of pixels),\
 - The **spatial resolution** of each pixel (in units of the raster’s CRS),\
@@ -220,7 +228,7 @@ In our case:\
 - **Number of bands**: `2`\
 - **Tile width**: `66`, **Tile height**: `15`
 
-All this information is important when **interpreting and working with raster data**, especially when performing **coordinate-based queries**.
+All this information is important when interpreting and working with raster data, especially when performing coordinate-based queries.
 
 ```{r}
 # Retrieve and view metadata for the world population raster
@@ -233,15 +241,17 @@ worldpop_sdf_metadata <- sdf_sql(
 ```
 
 ```{r}
+options(width = 100)
+
 # Glimpse at the metadata information
 worldpop_sdf_metadata |> glimpse()
 ```
 
 ## Joining point data with raster data
 
-We now **conduct the join using Spatial SQL**, as it is much easier and more intuitive than using Apache Sedona's R functions for raster operations.
+We now conduct the join using Spatial SQL, as it is much easier and more intuitive than using Apache Sedona's R functions for raster operations in my opinion.
 
-By leveraging **Spatial SQL**, we can directly query raster values at specific pickup and dropoff coordinates, simplifying what would otherwise be a more complex process if done via function-based syntax.
+By leveraging Spatial SQL, we can directly query raster values at specific pickup and dropoff coordinates, simplifying what would otherwise be a more complex process if done via function-based syntax.
 
 ```{r}
 # Perform a spatial join between the locations and the world population data to calculate population density
@@ -265,15 +275,14 @@ We can now take a look at the result of our join below.
 locations_sdf_updated_two %>% glimpse()
 
 # Print a preview of the resulting dataframe with specific formatting options
-withr::with_options(
-  list(pillar.sigfig = 6),
-  print(locations_sdf_updated_two, n=10)
-)
+print(locations_sdf_updated_two, n=10, width=Inf)
 ```
+
+Perfect! We have successfully obtained approximate population density values for each pickup and dropoff location.
 
 ## Saving the data
 
-And finally save the data to file.
+Writing the updated data to file for further processing.
 
 ```{r}
 #| eval: false
@@ -297,3 +306,6 @@ spark_write_delta(
 # Disconnect from the Spark session
 spark_disconnect(sc)
 ```
+
+## References
+- WorldPop (www.worldpop.org - School of Geography and Environmental Science, University of Southampton; Department of Geography and Geosciences, University of Louisville; Departement de Geographie, Universite de Namur) and Center for International Earth Science Information Network (CIESIN), Columbia University (2018). Global High Resolution Population Denominators Project - Funded by The Bill and Melinda Gates Foundation (OPP1134076). https://dx.doi.org/10.5258/SOTON/WP00675

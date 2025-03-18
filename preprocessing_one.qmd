@@ -13,7 +13,7 @@ The primary dataset was downloaded from Kaggle [here](https://www.kaggle.com/dat
 
 The overarching goal is to show you how to go about using **Delta Lake**, **Sparklyr**, **Apache Sedona**, and **R** for big data geospatial analysis when you only have an ordinary computer at your disposal.
 
-For my actual analysis, I used the entire 7.4 GB dataset provided, containing about **48 million rows**. However, for this published tutorial, I use less data so as to timely publish and update this website. For reference, I am using an **M1 MacBook** with **16 GB of RAM** and **500 GB of disk space**. 
+For my actual analysis, I used the entire 7.4 GB dataset provided, containing about **48 million rows**. However, for this published tutorial, I sometimes use less data so as to timely publish and update this website. For reference, I am using an **M1 MacBook** with **16 GB of RAM** and **500 GB of disk space**. 
 
 If you have 8 GB of RAM, I would suggest that you use one of the four datasets available, as they are also relatively massive with about 12 million rows each!
 
@@ -155,7 +155,7 @@ I recommend using the **Spark Web User Interface (UI)** to track metrics associa
 spark_web(sc)
 ```
 
-After successfully setting up a Spark context, we now turn to loading our data. We start by specifying the path where the files are located. Note that we are instructing Spark to read all CSV files within the `yellow_tripdata2` subfolder.
+After successfully setting up a Spark context, we now turn to loading our data. We start by specifying the path where the files are located. Note that we are instructing Spark to read all CSV files within the `yellow_tripdata` subfolder.
 
 Additionally, we organise our data into **24 partitions**. We chose 24 because it is **three times the number of our total cores (8)**. This approach helps ensure parallelism during processing and prevents [data skew](https://aws.amazon.com/blogs/big-data/detect-and-handle-data-skew-on-aws-glue/), which could otherwise slow down our computations.
 
@@ -163,7 +163,7 @@ Additionally, we organise our data into **24 partitions**. We chose 24 because i
 
 ```{r}
 # Define the path for the yellow cab data
-yellow_cab_parent_folder <- file.path(getwd(), "data", "yellow_tripdata2")
+yellow_cab_parent_folder <- file.path(getwd(), "data", "yellow_tripdata")
 yellow_cab_filepattern <- file.path(yellow_cab_parent_folder, "*csv")
 
 # Read the yellow cab data from CSV files into a Spark DataFrame
