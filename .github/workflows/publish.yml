@@ -18,3 +18,4 @@ jobs:
         with:
           branch: gh-pages  # Change if using another deployment branch
           folder: docs  # Upload the precompiled `docs` folder
+          token: ${{ secrets.GH_TOKEN }}  # Use the secret for authentication
