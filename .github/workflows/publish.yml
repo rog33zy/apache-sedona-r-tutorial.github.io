@@ -3,7 +3,7 @@ name: Deploy Quarto Site
 on:
   push:
     branches:
-      - main  # Adjust if using a different branch
+      - main
 
 jobs:
   deploy:
@@ -13,9 +13,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Deploy site
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: gh-pages  # Change if using another deployment branch
-          folder: docs  # Upload the precompiled `docs` folder
+          branch: gh-pages
+          folder: docs
           token: ${{ secrets.GH_TOKEN }}  # Use the secret for authentication
