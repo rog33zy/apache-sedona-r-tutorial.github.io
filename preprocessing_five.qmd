@@ -11,7 +11,7 @@ If you recall, we had initially separated location and non-location data so as t
 
 Having accomplished that, we will now combine the updated locations data with the rest of the trip data.
 
-This will be the last chapter for me, but please go further — create maps based on this data, and perform machine learning analysis too. You can find **Sparklyr machine learning documentation [here](https://spark.posit.co/guides/mlib.html**.
+This will be the last chapter for me, but please go further — create maps based on this data, and perform machine learning analysis too. You can find **Sparklyr machine learning documentation [here](https://spark.posit.co/guides/mlib.html)**.
 
 It has been a joy to come this far, and I hope you have learnt something new throughout this whole tutorial.
 
@@ -176,6 +176,8 @@ This is what our final dataset looks like.
 # Print the final merged dataset enriched with both pickup and dropoff spatial context
 print(merged_two, width = Inf, n=10)
 ```
+
+## Writing the final preprocessed dataset
 
 Finally, we write the data to disk. As stated earlier, feel free to go beyond this tutorial, creating maps based on NYC neighbourhoods and building models. Good luck, and thank you!
 
