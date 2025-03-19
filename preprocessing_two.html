@@ -233,7 +233,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="introduction" class="level2" data-number="3.1">
 <h2 data-number="3.1" class="anchored" data-anchor-id="introduction"><span class="header-section-number">3.1</span> Introduction</h2>
 <p>In this part, we are going to use the saved locations data to determine the <strong>pickup</strong> and <strong>dropoff neighbourhoods</strong> associated with each trip. We shall then use these additional data to obtain the <strong>median household incomes</strong> of the pickup and dropoff neighbourhoods. We use income as a proxy for <strong>affluence</strong>. Humour me by assuming that there is a relationship between the duration of a taxi trip and the affluence of either or both the pickup or dropoff locations.</p>
-<p>We shall introduce two new datasets: <strong>NYC Neighbourhood Tabulation Areas (NTAs) boundaries</strong> based on the <a href="https://s-media.nyc.gov/agencies/dcp/assets/files/zip/data-tools/bytes/nynta2020_25a.zip">2020 census</a>, and <strong>NTA household median income</strong> based on the <a href="https://s-media.nyc.gov/agencies/dcp/assets/files/excel/data-tools/census/acs/Econ_1822_NTA.xlsx">2022 American Community Survey (ACS)</a>. The boundaries data is in <strong>vector format</strong>, while the income data is in <strong>CSV format</strong> (originally .xlsx but filtered for GeoID and MdHHIncE columns, then saved as CSV). To do this, we shall use <strong>Apache Sedona (v1.7.0)</strong> to merge the NTA boundaries and income data. We will then perform a <strong>spatial join</strong> on the coordinates with the boundaries, determining the pickup and dropoff neighbourhoods.</p>
+<p>We shall introduce two new datasets: <strong>NYC Neighbourhood Tabulation Areas (NTAs) boundaries</strong> based on the <a href="https://s-media.nyc.gov/agencies/dcp/assets/files/zip/data-tools/bytes/nynta2020_25a.zip">2020 census</a>, and <strong>NTA household median income</strong> based on the <a href="https://s-media.nyc.gov/agencies/dcp/assets/files/excel/data-tools/census/acs/Econ_1822_NTA.xlsx">2022 American Community Survey (ACS)</a>. The boundaries data is in <strong>vector format</strong>, while the income data is in <strong>CSV format</strong> (originally .xlsx but filtered for GeoID and MdHHIncE columns, then saved as CSV). To do this, we shall use <strong>Apache Sedona (v1.7.1)</strong> to merge the NTA boundaries and income data. We will then perform a <strong>spatial join</strong> on the coordinates with the boundaries, determining the pickup and dropoff neighbourhoods.</p>
 <p>By the way, this will be a new file and not the same as the one used in Chapter 2. When working in local mode, I have found that it is more feasible to separate preprocessing into multiple stages. Running too many transformations at once is likely to result in out-of-memory errors and take a very long time to complete.</p>
 </section>
 <section id="installing-and-loading-packages" class="level2" data-number="3.2">
@@ -338,7 +338,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output cell-output-stdout">
 <pre><code>&lt;jobj[23]&gt;
   org.apache.spark.sql.SparkSession
-  org.apache.spark.sql.SparkSession@12f7ff17</code></pre>
+  org.apache.spark.sql.SparkSession@30f8754c</code></pre>
 </div>
 </div>
 <div class="cell">
@@ -367,7 +367,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 range</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   table&lt;`sparklyr_tmp_edf5abab_3dd3_41c4_a79a_d6cd53ade301`&gt; [?? x 4]
+<pre><code># Source:   table&lt;`sparklyr_tmp_4c473781_95e4_4f97_8ceb_29e438553126`&gt; [?? x 4]
 # Database: spark_connection
     trip_id latitude longitude is_pickup
       &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
@@ -608,7 +608,7 @@ PROJCRS["NAD83 / New York Long Island (ftUS)",
 range</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   table&lt;`sparklyr_tmp_ce3f2155_6fbf_4dad_b7a7_846178fd2db6`&gt; [?? x 5]
+<pre><code># Source:   table&lt;`sparklyr_tmp_63b9982f_5ebd_4759_bf03_e16f60191923`&gt; [?? x 5]
 # Database: spark_connection
 # ℹ more rows
 # ℹ 5 more variables: geometry &lt;arrw_bnr&gt;, BoroName &lt;chr&gt;, NTA2020 &lt;chr&gt;,
@@ -1209,7 +1209,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb52-10"><a href="#cb52-10" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb52-11"><a href="#cb52-11" aria-hidden="true" tabindex="-1"></a>In this part, we are going to use the saved locations data to determine the **pickup** and **dropoff neighbourhoods** associated with each trip. We shall then use these additional data to obtain the **median household incomes** of the pickup and dropoff neighbourhoods. We use income as a proxy for **affluence**. Humour me by assuming that there is a relationship between the duration of a taxi trip and the affluence of either or both the pickup or dropoff locations.</span>
 <span id="cb52-12"><a href="#cb52-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb52-13"><a href="#cb52-13" aria-hidden="true" tabindex="-1"></a>We shall introduce two new datasets: **NYC Neighbourhood Tabulation Areas (NTAs) boundaries** based on the [2020 census](https://s-media.nyc.gov/agencies/dcp/assets/files/zip/data-tools/bytes/nynta2020_25a.zip), and **NTA household median income** based on the [2022 American Community Survey (ACS)](https://s-media.nyc.gov/agencies/dcp/assets/files/excel/data-tools/census/acs/Econ_1822_NTA.xlsx). The boundaries data is in **vector format**, while the income data is in **CSV format** (originally .xlsx but filtered for GeoID and MdHHIncE columns, then saved as CSV). To do this, we shall use **Apache Sedona (v1.7.0)** to merge the NTA boundaries and income data. We will then perform a **spatial join** on the coordinates with the boundaries, determining the pickup and dropoff neighbourhoods.</span>
+<span id="cb52-13"><a href="#cb52-13" aria-hidden="true" tabindex="-1"></a>We shall introduce two new datasets: **NYC Neighbourhood Tabulation Areas (NTAs) boundaries** based on the [2020 census](https://s-media.nyc.gov/agencies/dcp/assets/files/zip/data-tools/bytes/nynta2020_25a.zip), and **NTA household median income** based on the [2022 American Community Survey (ACS)](https://s-media.nyc.gov/agencies/dcp/assets/files/excel/data-tools/census/acs/Econ_1822_NTA.xlsx). The boundaries data is in **vector format**, while the income data is in **CSV format** (originally .xlsx but filtered for GeoID and MdHHIncE columns, then saved as CSV). To do this, we shall use **Apache Sedona (v1.7.1)** to merge the NTA boundaries and income data. We will then perform a **spatial join** on the coordinates with the boundaries, determining the pickup and dropoff neighbourhoods.</span>
 <span id="cb52-14"><a href="#cb52-14" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb52-15"><a href="#cb52-15" aria-hidden="true" tabindex="-1"></a>By the way, this will be a new file and not the same as the one used in Chapter 2. When working in local mode, I have found that it is more feasible to separate preprocessing into multiple stages. Running too many transformations at once is likely to result in out-of-memory errors and take a very long time to complete.</span>
 <span id="cb52-16"><a href="#cb52-16" aria-hidden="true" tabindex="-1"></a></span>

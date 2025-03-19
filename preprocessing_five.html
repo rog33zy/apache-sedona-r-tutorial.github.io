@@ -192,6 +192,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">6.1</span> Introduction</a></li>
   <li><a href="#load-the-datasets" id="toc-load-the-datasets" class="nav-link" data-scroll-target="#load-the-datasets"><span class="header-section-number">6.2</span> Load the datasets</a></li>
   <li><a href="#joining-the-datasets" id="toc-joining-the-datasets" class="nav-link" data-scroll-target="#joining-the-datasets"><span class="header-section-number">6.3</span> Joining the datasets</a></li>
+  <li><a href="#writing-the-final-preprocessed-dataset" id="toc-writing-the-final-preprocessed-dataset" class="nav-link" data-scroll-target="#writing-the-final-preprocessed-dataset"><span class="header-section-number">6.4</span> Writing the final preprocessed dataset</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io/edit/main/preprocessing_five.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/rog33zy/apache-sedona-r-tutorial.github.io/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -221,7 +222,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 data-number="6.1" class="anchored" data-anchor-id="introduction"><span class="header-section-number">6.1</span> Introduction</h2>
 <p>If you recall, we had initially separated location and non-location data so as to gather more location-related data, such as median household income and population density around pickup and dropoff points.</p>
 <p>Having accomplished that, we will now combine the updated locations data with the rest of the trip data.</p>
-<p>This will be the last chapter for me, but please go further — create maps based on this data, and perform machine learning analysis too. You can find <strong>Sparklyr machine learning documentation [here](https://spark.posit.co/guides/mlib.html</strong>.</p>
+<p>This will be the last chapter for me, but please go further — create maps based on this data, and perform machine learning analysis too. You can find <strong>Sparklyr machine learning documentation <a href="https://spark.posit.co/guides/mlib.html">here</a></strong>.</p>
 <p>It has been a joy to come this far, and I hope you have learnt something new throughout this whole tutorial.</p>
 <p><strong>FYI</strong>, because we are not using Apache Sedona in this part, we are using the same Spark configuration as that used in Chapter Two.</p>
 <p>Anyhow, let us get to work!</p>
@@ -632,6 +633,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 # ℹ more rows</code></pre>
 </div>
 </div>
+</section>
+<section id="writing-the-final-preprocessed-dataset" class="level2" data-number="6.4">
+<h2 data-number="6.4" class="anchored" data-anchor-id="writing-the-final-preprocessed-dataset"><span class="header-section-number">6.4</span> Writing the final preprocessed dataset</h2>
 <p>Finally, we write the data to disk. As stated earlier, feel free to go beyond this tutorial, creating maps based on NYC neighbourhoods and building models. Good luck, and thank you!</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define output path to save final merged dataset in Delta format</span></span>
@@ -1119,7 +1123,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>Having accomplished that, we will now combine the updated locations data with the rest of the trip data.</span>
 <span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>This will be the last chapter for me, but please go further — create maps based on this data, and perform machine learning analysis too. You can find **Sparklyr machine learning documentation [here](https://spark.posit.co/guides/mlib.html**.</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>This will be the last chapter for me, but please go further — create maps based on this data, and perform machine learning analysis too. You can find **Sparklyr machine learning documentation [here](https://spark.posit.co/guides/mlib.html)**.</span>
 <span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>It has been a joy to come this far, and I hope you have learnt something new throughout this whole tutorial.</span>
 <span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a></span>
@@ -1285,30 +1289,32 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb13-191"><a href="#cb13-191" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(merged_two, <span class="at">width =</span> <span class="cn">Inf</span>, <span class="at">n=</span><span class="dv">10</span>)</span>
 <span id="cb13-192"><a href="#cb13-192" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb13-193"><a href="#cb13-193" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-194"><a href="#cb13-194" aria-hidden="true" tabindex="-1"></a>Finally, we write the data to disk. As stated earlier, feel free to go beyond this tutorial, creating maps based on NYC neighbourhoods and building models. Good luck, and thank you!</span>
+<span id="cb13-194"><a href="#cb13-194" aria-hidden="true" tabindex="-1"></a><span class="fu">## Writing the final preprocessed dataset</span></span>
 <span id="cb13-195"><a href="#cb13-195" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-198"><a href="#cb13-198" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb13-199"><a href="#cb13-199" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
-<span id="cb13-200"><a href="#cb13-200" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-201"><a href="#cb13-201" aria-hidden="true" tabindex="-1"></a><span class="co"># Define output path to save final merged dataset in Delta format</span></span>
-<span id="cb13-202"><a href="#cb13-202" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_four_file_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(</span>
-<span id="cb13-203"><a href="#cb13-203" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getwd</span>(),</span>
-<span id="cb13-204"><a href="#cb13-204" aria-hidden="true" tabindex="-1"></a>  <span class="st">"data"</span>,</span>
-<span id="cb13-205"><a href="#cb13-205" aria-hidden="true" tabindex="-1"></a>  <span class="st">"locations_sdf_updated_four"</span></span>
-<span id="cb13-206"><a href="#cb13-206" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb13-207"><a href="#cb13-207" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-208"><a href="#cb13-208" aria-hidden="true" tabindex="-1"></a><span class="co"># Write final dataset in Delta format with append mode to allow incremental writing</span></span>
-<span id="cb13-209"><a href="#cb13-209" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
-<span id="cb13-210"><a href="#cb13-210" aria-hidden="true" tabindex="-1"></a>  merged_two,</span>
-<span id="cb13-211"><a href="#cb13-211" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> locations_sdf_updated_four_file_path,</span>
-<span id="cb13-212"><a href="#cb13-212" aria-hidden="true" tabindex="-1"></a>  <span class="at">mode =</span> <span class="st">"append"</span></span>
-<span id="cb13-213"><a href="#cb13-213" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb13-214"><a href="#cb13-214" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb13-215"><a href="#cb13-215" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-218"><a href="#cb13-218" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb13-219"><a href="#cb13-219" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from the Spark session to free resources</span></span>
-<span id="cb13-220"><a href="#cb13-220" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span>
-<span id="cb13-221"><a href="#cb13-221" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb13-196"><a href="#cb13-196" aria-hidden="true" tabindex="-1"></a>Finally, we write the data to disk. As stated earlier, feel free to go beyond this tutorial, creating maps based on NYC neighbourhoods and building models. Good luck, and thank you!</span>
+<span id="cb13-197"><a href="#cb13-197" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-200"><a href="#cb13-200" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb13-201"><a href="#cb13-201" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb13-202"><a href="#cb13-202" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-203"><a href="#cb13-203" aria-hidden="true" tabindex="-1"></a><span class="co"># Define output path to save final merged dataset in Delta format</span></span>
+<span id="cb13-204"><a href="#cb13-204" aria-hidden="true" tabindex="-1"></a>locations_sdf_updated_four_file_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(</span>
+<span id="cb13-205"><a href="#cb13-205" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getwd</span>(),</span>
+<span id="cb13-206"><a href="#cb13-206" aria-hidden="true" tabindex="-1"></a>  <span class="st">"data"</span>,</span>
+<span id="cb13-207"><a href="#cb13-207" aria-hidden="true" tabindex="-1"></a>  <span class="st">"locations_sdf_updated_four"</span></span>
+<span id="cb13-208"><a href="#cb13-208" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-209"><a href="#cb13-209" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-210"><a href="#cb13-210" aria-hidden="true" tabindex="-1"></a><span class="co"># Write final dataset in Delta format with append mode to allow incremental writing</span></span>
+<span id="cb13-211"><a href="#cb13-211" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_write_delta</span>(</span>
+<span id="cb13-212"><a href="#cb13-212" aria-hidden="true" tabindex="-1"></a>  merged_two,</span>
+<span id="cb13-213"><a href="#cb13-213" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> locations_sdf_updated_four_file_path,</span>
+<span id="cb13-214"><a href="#cb13-214" aria-hidden="true" tabindex="-1"></a>  <span class="at">mode =</span> <span class="st">"append"</span></span>
+<span id="cb13-215"><a href="#cb13-215" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-216"><a href="#cb13-216" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb13-217"><a href="#cb13-217" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-220"><a href="#cb13-220" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb13-221"><a href="#cb13-221" aria-hidden="true" tabindex="-1"></a><span class="co"># Disconnect from the Spark session to free resources</span></span>
+<span id="cb13-222"><a href="#cb13-222" aria-hidden="true" tabindex="-1"></a><span class="fu">spark_disconnect</span>(sc)</span>
+<span id="cb13-223"><a href="#cb13-223" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
