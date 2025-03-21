@@ -13,7 +13,7 @@ The primary dataset was downloaded from Kaggle [here](https://www.kaggle.com/dat
 
 The overarching goal is to show you how to go about using **Delta Lake**, **Sparklyr**, **Apache Sedona**, and **R** for big data geospatial analysis when you only have an ordinary computer at your disposal.
 
-For my actual analysis, I used the entire 7.4 GB dataset provided, containing about **47 million rows**. However, for this published tutorial, I sometimes use less data so as to timely publish and update this website. For reference, I am using an **M1 MacBook** with **16 GB of RAM** and **500 GB of disk space**. 
+For my actual analysis, I used the entire 7.4 GB dataset provided, containing about **47 million rows**. However, for this published tutorial, I sometimes use less data so as to timely publish and update this website. For reference, I am using an **M1 MacBook** with **16 GB of RAM** and **500 GB of disk space**.
 
 If you have 8 GB of RAM, I would suggest that you use one of the four datasets available, as they are also relatively massive with about 12 million rows each!
 
@@ -21,16 +21,18 @@ Anyhow, enough talking — let us get to work.
 
 ## Installing and loading packages
 
-We shall start by installing and loading the necessary libraries: `arrow`, `sparklyr`, and `dplyr`.
+We shall start by installing and loading the necessary libraries: `arrow`, `sparklyr`, `rJavaEnv`, and `dplyr`.
 
 ```{r}
-#| eval: false
+#| eval: true
+#| output: false
 
 install.packages("arrow")
 install.packages("sparklyr")
+install.packages("rJavaEnv")
 ```
 
-We use `sparklyr` to interface with [Apache Spark](https://aws.amazon.com/what-is/apache-spark/) in R, allowing us to work efficiently with large datasets using distributed computing. Spark operates on a cluster-based architecture, where a **driver** program coordinates tasks and **executors** perform computations across multiple nodes in parallel. However, when clusters are unavailable, Spark can also run in **local mode**, using a single machine while still leveraging parallelism to speed up computations. This makes it accessible for development and smaller-scale analyses. The `dplyr` package provides powerful data manipulation functions that integrate seamlessly with Spark, making it easier to transform and summarise data. Finally, we load `arrow`, which enhances Spark’s [performance](https://arrow.apache.org/blog/2019/01/25/r-spark-improvements/) when copying, collecting, and transforming data, thereby improving the overall efficiency of our analysis.
+We use `sparklyr` to interface with [Apache Spark](https://aws.amazon.com/what-is/apache-spark/) in R, allowing us to work efficiently with large datasets using distributed computing. Spark operates on a cluster-based architecture, where a **driver** program coordinates tasks and **executors** perform computations across multiple nodes in parallel. However, when clusters are unavailable, Spark can also run in **local mode**, using a single machine while still leveraging parallelism to speed up computations. This makes it accessible for development and smaller-scale analyses. The `dplyr` package provides powerful data manipulation functions that integrate seamlessly with Spark, making it easier to transform and summarise data. Meanwhile, `rJavaEnv` is a package that allows us to automatically install Java and set the JAVA_HOME variable as it is a requirement for using Spark, because Spark runs on a Java Virtual Machine (JVM). Finally, we load `arrow`, which enhances Spark’s [performance](https://arrow.apache.org/blog/2019/01/25/r-spark-improvements/) when copying, collecting, and transforming data, thereby improving the overall efficiency of our analysis.
 
 ```{r}
 #| output: false
@@ -39,22 +41,25 @@ We use `sparklyr` to interface with [Apache Spark](https://aws.amazon.com/what-i
 library(arrow)      # Handle efficient data exchange between R and Spark
 library(sparklyr)   # Spark connection and data manipulation
 library(dplyr)      # Data manipulation functions
+library(rJavaEnv)   # Installs Java and sets JAVA_HOME environment
 ```
 
-We can now use `sparklyr` to download and install Spark. In this tutorial, we shall install **Spark version 3.5.5** and create the `JAVA_HOME` and `SPARK_HOME` environment variables. Although you can initialise these variables system-wide, it is often easier to set them within your working file, especially if you have multiple installations of Spark and Java on your system.
+We can now use `sparklyr` to download and install Spark. In this chapter, we shall install **Spark version 3.5.5**, **Java version 17** and set the `JAVA_HOME` and `SPARK_HOME` environment variables. Although you can initialise these variables system-wide, it is often easier to set them within your working file, especially if you have multiple installations of Spark and Java on your system.
 
-Whilst Spark 3.5 is compiled for Java 8, 11, and 17, I would recommend using **Java 11**, as it has proven to be more stable in my experience compared to the other two versions. Additionally, I cannot overemphasise the importance of downloading a Java version that is **natively designed for your system's processor**. As previously stated, I own an M1 MacBook (ARM 64-bit), so I previously encountered memory issues when using Java designed for Intel processors (x86 64-bit) as the processor was forced to perform extra avoidable work. Switching to an ARM-based Java greatly improved the performance of my code.
-
-You can freely download an appropriate Java version for your machine [here](https://www.azul.com/downloads/?package=jdk#zulu).
+Whilst Spark 3.5 is compiled for Java 8, 11, and 17, I previously used Java 11 as I found it to be more stable than 8 and 17. However, support for Java versions 8 and 11 will be discontinued in the next Spark major release ([source](https://spark.apache.org/releases/spark-release-3-5-0.html)). Therefore, I will use version 17 for this tutorial, and so should you. If you encounter problems while using version 17, switch to 11. Thankfully, the `rJavaEnv` package will automatically install Java and set the JAVA_HOME and PATH environment variables.
 
 ## Installing Spark and setting environment variables
 
 ```{r}
+#| output: false
+
 # Install and set up Spark environment
 spark_install("3.5.5")  # Install the specific version of Spark (3.5.5)
 
-# Set Java and Spark home directory paths
-Sys.setenv("JAVA_HOME"="/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home")  # Set Java home directory for Spark
+# Installs Java 17 and sets JAVA_HOME environment variable
+java_quick_install(version = 17)
+
+# Set Spark home directory path (not obligatory as it is done implicitly upon installing Spark)
 Sys.setenv("SPARK_HOME"=spark_home_dir(version = "3.5.5"))  # Set Spark home directory
 ```
 
@@ -79,7 +84,7 @@ We now initialise a list and provide configuration settings for Spark. This is a
 
 Spark runs on the **Java Virtual Machine (JVM)**, and **Java heap space** refers to the memory allocated to the JVM during runtime for storing objects and data. The heap memory is divided into **Spark memory (M)**, **reserved memory**, and **user memory**. Spark memory itself is divided into two parts: **execution** and **storage (R)**. Execution memory is used for computations such as shuffles, joins, sorts, and aggregations. Storage memory, on the other hand, is used for caching and propagating internal data across the cluster (when running in cluster mode). Read more about this [here](https://spark.apache.org/docs/latest/tuning.html).
 
-In our case, since we are running our code in **local mode**, we set the JVM heap space to **10GB** using `sparklyr.shell.driver-memory`. We then allocate **70% of the JVM heap space** to Spark memory (M) using the `spark.memory.fraction` option. This means **7GB** is reserved for both storage and execution. By default, **50% of M** (i.e., **3.5GB**) is reserved for storage (R). Although this can be adjusted using `spark.memory.storageFraction`, we leave it at the default here. Importantly, when no execution memory is needed, R can make use of the entire 7GB. 
+In our case, since we are running our code in **local mode**, we set the JVM heap space to **10GB** using `sparklyr.shell.driver-memory`. We then allocate **70% of the JVM heap space** to Spark memory (M) using the `spark.memory.fraction` option. This means **7GB** is reserved for both storage and execution. By default, **50% of M** (i.e., **3.5GB**) is reserved for storage (R). Although this can be adjusted using `spark.memory.storageFraction`, we leave it at the default here. Importantly, when no execution memory is needed, R can make use of the entire 7GB.
 
 Other configuration choices we make include enabling the storage of **2GB of data off-heap** (i.e., outside the JVM) using the settings `spark.memory.offHeap.enabled = "true"` and `spark.memory.offHeap.size = "2g"`. We also instruct Spark **not to write intermediate shuffle data to disk**—to avoid I/O bottlenecks—by setting `spark.sql.shuffle.spill = "false"`.
 
@@ -135,7 +140,7 @@ config$spark.sql.files.maxPartitionBytes <- "200m"
 config$spark.sql.adaptive.enabled <- "true"  
 ```
 
-After configuring our setup, we now connect to Spark. Note that we have also instructed Spark to install the **Delta** package. This is a necessary step if you want to read from or write to Delta tables, which are commonly used for managing large-scale data with [ACID transaction](https://docs.databricks.com/aws/en/lakehouse/acid) support among many other advantages. By including **local[*]** in our spark context, we have told Spark to use all available cores in our computer. If, for instance, you only wanted to use 4, you would change this to **local[4]**.
+After configuring our setup, we now connect to Spark. Note that we have also instructed Spark to install the **Delta** package. This is a necessary step if you want to read from or write to Delta tables, which are commonly used for managing large-scale data with [ACID transaction](https://docs.databricks.com/aws/en/lakehouse/acid) support among many other advantages. By including **local\[\*\]** in our spark context, we have told Spark to use all available cores in our computer. If, for instance, you only wanted to use 4, you would change this to **local\[4\]**.
 
 ```{r}
 # Connect to Spark with the specified configurations
@@ -258,7 +263,6 @@ print(missing_values_by_col %>% class())
 ```
 
 We can see that the only column with missing values is **`improvement_surcharge`**. We shall impute the missing data using the median value of the column and create a new column called **`improvement_surcharge_imputed`**.
-
 
 ```{r}
 # Impute missing values for specific columns (e.g., "improvement_surcharge")
@@ -413,7 +417,7 @@ print(trip_data_sdf, width = Inf, n=10)
 
 ## Writing the data
 
-Finally, we save the preprocessed data into **Delta Lake**. While we had no choice in determining the format of the initial dataset, we do have a choice in how we write it. Delta Lake is based on Parquet files, but incorporates additional metadata that improves the efficiency of dealing with multiple parquet files. 
+Finally, we save the preprocessed data into **Delta Lake**. While we had no choice in determining the format of the initial dataset, we do have a choice in how we write it. Delta Lake is based on Parquet files, but incorporates additional metadata that improves the efficiency of dealing with multiple parquet files.
 
 The main difference between Parquet files and CSV files is that Parquet is columnar-based, while CSV is row-based. This offers several advantages to Parquet files, such as faster reading and smaller file sizes. Delta Lake further enhances Parquet files by adding ACID capabilities, among other features. You can find a detailed discussion of the advantages of using Delta tables over Parquet files [here](https://delta.io/blog/delta-lake-vs-parquet-comparison/).
 
