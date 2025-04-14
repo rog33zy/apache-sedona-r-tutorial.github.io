@@ -18,6 +18,7 @@ derby.log
 data/
 
 # Docker files
+Dockerfile
 docker-compose.yml
 requirements-bin.txt
 requirements-src.R
