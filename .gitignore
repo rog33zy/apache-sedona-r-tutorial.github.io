@@ -14,8 +14,18 @@ _site/
 # Logs
 derby.log
 
-# Optional: data (uncomment if you don't want to track datasets)
+# Optional: data
 data/
+
+# Docker files
+docker-compose.yml
+requirements-bin.txt
+requirements-src.R
+rstudio-prefs.json
+
+# Java
+rjavaenv/
+
 
 # Other
 *.Rproj
